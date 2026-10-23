@@ -227,10 +227,10 @@ const LearnerCertificates = () => {
                   <Button
                     variant="navy"
                     size="sm"
-                    icon={Printer}
+                    icon={ExternalLink}
                     onClick={() => navigate(`/learner/certificates/${cert.id}`)}
                   >
-                    View & Print Certificate
+                    View, Download & Share
                   </Button>
                 </div>
               </div>
