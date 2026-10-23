@@ -88,7 +88,7 @@ const CertificateViewer = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className="space-y-6 w-full pb-12">
       {/* Action Toolbar (Hidden during print) */}
       <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <button

@@ -68,7 +68,7 @@ const Pagination = ({
                 onPageSizeChange(Number(e.target.value));
                 onPageChange(1);
               }}
-              className="h-8 px-2.5 bg-white border border-[#CBD5E1] text-[#172B4D] text-xs font-semibold rounded-xl focus:outline-none focus:border-[#2C51A2]"
+              className="h-8 px-2.5 bg-white border border-[#CBD5E1] hover:border-[#2C51A2] text-[#172B4D] text-xs font-semibold rounded-xl focus:outline-none focus:border-[#2C51A2] focus:ring-2 focus:ring-[#2C51A2]/20 cursor-pointer shadow-xs transition-all"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>

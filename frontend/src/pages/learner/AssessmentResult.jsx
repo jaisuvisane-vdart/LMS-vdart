@@ -81,7 +81,7 @@ const AssessmentResult = () => {
   const passingPct = parseFloat(scorecard.passing_percentage || 0).toFixed(0);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 w-full">
       {/* Top Banner Outcome */}
       <div
         className={`p-6 sm:p-8 rounded-2xl border shadow-lg ${

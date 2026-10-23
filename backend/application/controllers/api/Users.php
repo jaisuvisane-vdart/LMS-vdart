@@ -68,11 +68,12 @@ class Users extends API_Controller {
         $email = strtolower(trim($input['email'] ?? ''));
         $first_name = trim($input['first_name'] ?? '');
         $last_name = trim($input['last_name'] ?? '');
-        $password = $input['password'] ?? '';
+        $password = !empty($input['password']) ? $input['password'] : 'Welcome@123';
+        $input['password'] = $password;
         $role_id = (int)($input['role_id'] ?? 3);
 
-        if (empty($email) || empty($first_name) || empty($last_name) || empty($password)) {
-            return $this->error_response('First name, last name, email, and password are required.', 422);
+        if (empty($email) || empty($first_name) || empty($last_name)) {
+            return $this->error_response('First name, last name, and email are required.', 422);
         }
 
         if ($this->users->email_exists($email)) {
@@ -165,5 +166,85 @@ class Users extends API_Controller {
         );
 
         return $this->json_response(['id' => $id, 'status' => $status], "User status updated to $status.");
+    }
+
+    /**
+     * DELETE /api/users/{id}
+     * Permanently delete user account
+     */
+    public function delete($id) {
+        $this->require_role(['admin']);
+
+        $id = (int)$id;
+        $existing = $this->users->get_by_id($id);
+        if (!$existing) {
+            return $this->error_response('User not found.', 404);
+        }
+
+        // Prevent admin deleting own account
+        if ($id === (int)$this->current_user['id']) {
+            return $this->error_response('Administrators cannot delete their own account.', 400);
+        }
+
+        $success = $this->users->delete_user($id, $this->current_user['id']);
+        if (!$success) {
+            return $this->error_response('Failed to delete user account due to a database error.', 500);
+        }
+
+        // Audit log
+        $this->audit->log(
+            $this->current_user['id'],
+            'USER_DELETED',
+            'users',
+            $id,
+            $existing,
+            null
+        );
+
+        return $this->json_response(['id' => $id], 'User account permanently deleted.');
+    }
+
+    /**
+     * GET /api/users/{id}/details
+     * Comprehensive learner dossier: profile details, registered courses, completed courses, and certifications
+     */
+    public function learner_details($id = null) {
+        $this->require_role(['admin']);
+
+        $id = (int)$id;
+        $user = $this->users->get_by_id($id);
+        if (!$user) {
+            return $this->error_response('User not found.', 404);
+        }
+
+        $this->load->model('Assignment_model', 'assignments');
+        $this->load->model('Certificate_model', 'certificates');
+
+        $courses = $this->assignments->get_learner_assignments($id);
+        $certificates = $this->certificates->get_learner_certificates($id);
+
+        $completed_count = 0;
+        $pending_count = 0;
+        foreach ($courses as $c) {
+            if ($c['status'] === 'completed') {
+                $completed_count++;
+            } else {
+                $pending_count++;
+            }
+        }
+
+        $stats = [
+            'total_courses'      => count($courses),
+            'completed_courses'  => $completed_count,
+            'pending_courses'    => $pending_count,
+            'total_certificates' => count($certificates),
+        ];
+
+        return $this->json_response([
+            'user'         => $user,
+            'courses'      => $courses,
+            'certificates' => $certificates,
+            'stats'        => $stats,
+        ], 'Learner dossier retrieved successfully.');
     }
 }

@@ -466,8 +466,8 @@ const CoursePlayer = () => {
           </div>
           {course?.course_type === 'non_certified' ? (
             currentProgressPercent >= 100 ? (
-              <div className="clay-pill text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-1.5 rounded-full border border-emerald-300 flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="clay-pill text-[10px] font-bold uppercase tracking-wider text-[#1E3B78] bg-[#E2E9F4] px-3 py-1.5 rounded-full border border-[#BCD0EC] flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5 text-[#2C51A2]" />
                 <span>Training Completed</span>
               </div>
             ) : (
@@ -522,16 +522,16 @@ const CoursePlayer = () => {
 
       {/* Non-Certified Course 100% Completed Banner */}
       {!loading && course && course.course_type === 'non_certified' && currentProgressPercent >= 100 && (
-        <div className="clay-card p-5 rounded-2xl border border-emerald-300 bg-gradient-to-r from-emerald-50 to-[#F0FDF4] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="clay-card p-5 rounded-2xl border border-[#BCD0EC] bg-gradient-to-r from-[#EFF6FF] to-[#E2E9F4] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#2C51A2] text-white flex items-center justify-center shrink-0 shadow-sm">
               <CheckCircle className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-emerald-900 uppercase tracking-wide">
+              <h3 className="text-sm font-bold text-[#1E3B78] uppercase tracking-wide">
                 Training Completed
               </h3>
-              <p className="text-xs text-emerald-700 mt-0.5">
+              <p className="text-xs text-[#2C51A2] mt-0.5">
                 You have successfully completed all curriculum lessons for {course.title}. This course is non-certified; no exam or certificate is issued.
               </p>
             </div>
@@ -540,7 +540,7 @@ const CoursePlayer = () => {
             variant="outline"
             size="sm"
             onClick={() => navigate('/learner/courses')}
-            className="shrink-0 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+            className="shrink-0 text-[#1E3B78] border-[#BCD0EC] hover:bg-[#E2E9F4]"
           >
             Return to Courses
           </Button>
@@ -627,7 +627,7 @@ const CoursePlayer = () => {
                 </span>
                 <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
                   course.course_type === 'certified' || !course.course_type
-                    ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40'
+                    ? 'bg-blue-400/30 text-blue-100 border border-blue-300/40'
                     : 'bg-white/20 text-white/90 border border-white/30'
                 }`}>
                   {course.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}
@@ -793,7 +793,7 @@ const CoursePlayer = () => {
                         <div className="w-full bg-[#E2E8F0] h-2 rounded-full overflow-hidden">
                           <div
                             className={`h-full transition-all duration-1000 ${
-                              secondsRemaining === 0 ? 'bg-[#10B981]' : 'bg-[#2C51A2]'
+                              secondsRemaining === 0 ? 'bg-[#1E3B78]' : 'bg-[#2C51A2]'
                             }`}
                             style={{ width: `${Math.min(100, ((60 - secondsRemaining) / 60) * 100)}%` }}
                           />
@@ -1138,7 +1138,7 @@ const CoursePlayer = () => {
                                       if (el.type === 'table') {
                                         return (
                                           <div key={elIdx} className="my-4 overflow-x-auto rounded-xl border border-[#CBD5E1] shadow-xs">
-                                            <table className="w-full text-left text-xs border-collapse">
+                                            <table className="w-full text-center text-xs border-collapse">
                                               <tbody>
                                                 {el.rows.map((row, rIdx) => (
                                                   <tr
@@ -1152,9 +1152,9 @@ const CoursePlayer = () => {
                                                     {row.map((cell, cIdx) => (
                                                       <td
                                                         key={cIdx}
-                                                        className={`p-3 text-[#172B4D] border-r border-[#E2E8F0] last:border-r-0 ${
+                                                        className={`p-3 text-[#172B4D] text-center border-r border-[#E2E8F0] last:border-r-0 ${
                                                           rIdx === 0
-                                                            ? 'font-bold uppercase tracking-wider text-[11px] bg-[#F1F5F9]'
+                                                            ? 'font-bold uppercase tracking-wider text-[11px] bg-[#F1F5F9] text-center'
                                                             : ''
                                                         }`}
                                                       >
@@ -1266,7 +1266,7 @@ const CoursePlayer = () => {
                                   return (
                                     <div className="rounded-2xl border border-[#CBD5E1] overflow-hidden shadow-xs bg-white">
                                       <div className="max-h-[520px] overflow-auto">
-                                        <table className="w-full text-left text-xs border-collapse">
+                                        <table className="w-full text-center text-xs border-collapse">
                                           <thead className="sticky top-0 bg-[#F1F5F9] text-[#1E3B78] border-b border-[#CBD5E1] z-10">
                                             <tr>
                                               <th className="p-2.5 w-12 text-center text-[10px] font-bold text-[#64748B] uppercase tracking-wider border-r border-[#CBD5E1] bg-[#E2E8F0]">
@@ -1275,7 +1275,7 @@ const CoursePlayer = () => {
                                               {activeSheet.headers?.map((h, hIdx) => (
                                                 <th
                                                   key={hIdx}
-                                                  className="p-2.5 font-bold uppercase tracking-wider text-[11px] border-r border-[#CBD5E1] last:border-r-0 whitespace-nowrap"
+                                                  className="p-2.5 text-center font-bold uppercase tracking-wider text-[11px] border-r border-[#CBD5E1] last:border-r-0 whitespace-nowrap"
                                                 >
                                                   {h || `Col ${String.fromCharCode(65 + (hIdx % 26))}`}
                                                 </th>
@@ -1295,7 +1295,7 @@ const CoursePlayer = () => {
                                                   {row.map((cell, cIdx) => (
                                                     <td
                                                       key={cIdx}
-                                                      className="p-2.5 text-[#172B4D] border-r border-[#E2E8F0] last:border-r-0 whitespace-nowrap font-sans"
+                                                      className="p-2.5 text-center text-[#172B4D] border-r border-[#E2E8F0] last:border-r-0 whitespace-nowrap font-sans"
                                                     >
                                                       {cell}
                                                     </td>

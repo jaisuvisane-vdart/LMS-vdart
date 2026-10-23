@@ -16,6 +16,12 @@ $route['translate_uri_dashes'] = FALSE;
 | -------------------------------------------------------------------------
 */
 $route['api/auth/login']          = 'api/auth/login';
+$route['api/auth/google-login']   = 'api/auth/google_login';
+$route['api/auth/check-email-status']['post'] = 'api/auth/check_email_status';
+$route['api/auth/request-first-login-otp']  = 'api/auth/request_first_login_otp';
+$route['api/auth/verify-first-login-otp']   = 'api/auth/verify_first_login_otp';
+$route['api/auth/resend-first-login-otp']   = 'api/auth/resend_first_login_otp';
+$route['api/auth/complete-first-login']     = 'api/auth/complete_first_login';
 $route['api/auth/logout']         = 'api/auth/logout';
 $route['api/auth/me']             = 'api/auth/me';
 $route['api/dashboard/stats']     = 'api/dashboard/stats';
@@ -50,6 +56,8 @@ $route['api/course-assignments/learners']       = 'api/assignments/learners';
 $route['api/course-assignments']['get']         = 'api/assignments/index';
 $route['api/course-assignments']['post']        = 'api/assignments/create';
 $route['api/course-assignments/(:num)']['delete'] = 'api/assignments/delete/$1';
+$route['api/course-assignments/(:num)/admin-complete']['post'] = 'api/assignments/admin_complete/$1';
+$route['api/course-assignments/(:num)/admin-reset']['post']    = 'api/assignments/admin_reset/$1';
 $route['api/my-courses']                        = 'api/assignments/my_courses';
 
 // Phase 3: Learning Progress Routes
@@ -88,7 +96,9 @@ $route['api/users/roles']['get']                       = 'api/users/roles';
 $route['api/users']['get']                             = 'api/users/index';
 $route['api/users']['post']                            = 'api/users/create';
 $route['api/users/(:num)']['get']                      = 'api/users/show/$1';
+$route['api/users/(:num)/details']['get']              = 'api/users/learner_details/$1';
 $route['api/users/(:num)']['put']                      = 'api/users/update/$1';
+$route['api/users/(:num)']['delete']                   = 'api/users/delete/$1';
 $route['api/users/(:num)/status']['patch']             = 'api/users/toggle_status/$1';
 
 // Phase 5: Enterprise Reporting & Analytics

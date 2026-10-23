@@ -9,21 +9,19 @@ import {
   User,
   Shield,
   Bell,
-  Eye,
   CheckCircle,
   AlertCircle,
   KeyRound,
   Building,
   Briefcase,
   Mail,
-  Phone,
-  Laptop
+  Phone
 } from 'lucide-react';
 
 const Settings = () => {
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security' | 'notifications' | 'display'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' | 'security' | 'notifications'
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -133,7 +131,6 @@ const Settings = () => {
     { id: 'profile', label: 'Profile Information', icon: User },
     { id: 'security', label: 'Security & Password', icon: KeyRound },
     { id: 'notifications', label: 'Notification Alerts', icon: Bell },
-    { id: 'display', label: 'Platform Preferences', icon: Laptop },
   ];
 
   return (
@@ -151,7 +148,7 @@ const Settings = () => {
             Account Preferences & Security
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5 max-w-2xl leading-relaxed">
-            Manage your personal profile, secure credentials, notifications, and visual preferences.
+            Manage your personal profile, secure credentials, and notification alerts.
           </p>
         </div>
 
@@ -379,54 +376,6 @@ const Settings = () => {
                     onChange={(e) => setNotifications({ ...notifications, system_announcements: e.target.checked })}
                     className="w-4 h-4 accent-[#2C51A2] cursor-pointer"
                   />
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {/* Tab 4: Platform Preferences */}
-          {activeTab === 'display' && (
-            <Card title="Display & Typography Preferences" subtitle="Platform design standards and typographic controls">
-              <div className="space-y-4">
-                <div className="p-5 clay-card rounded-2xl space-y-2">
-                  <div className="text-xs font-bold text-[#2C51A2] uppercase tracking-wider">Active Visual System</div>
-                  <h3 className="text-base font-bold text-[#172B4D]">Minimal Claymorphism (Contemporary Soft Clay)</h3>
-                  <p className="text-xs text-[#64748B] leading-relaxed">
-                    Sculpted satin surfaces with dual-layer ambient and inset lighting, recessed inputs, and tactile button micro-interactions.
-                  </p>
-                </div>
-
-                <div className="p-5 clay-card rounded-2xl space-y-2">
-                  <div className="text-xs font-bold text-[#2C51A2] uppercase tracking-wider">Active Typography</div>
-                  <h3 className="text-base font-bold text-[#172B4D]">Outfit Geometric Sans-Serif</h3>
-                  <p className="text-xs text-[#64748B] leading-relaxed">
-                    Rendered consistently across all dashboards, modules, cards, reports, and credential views.
-                  </p>
-                </div>
-
-                <div className="p-5 clay-card rounded-2xl space-y-2">
-                  <div className="text-xs font-bold text-[#2C51A2] uppercase tracking-wider">Visual Identity Colors</div>
-                  <div className="flex flex-wrap items-center gap-4 pt-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#2C51A2] inline-block clay-pill border border-white"></span>
-                      <span className="text-xs font-bold text-[#172B4D]">Primary Blue (#2C51A2)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#1E3B78] inline-block clay-pill border border-white"></span>
-                      <span className="text-xs font-bold text-[#172B4D]">Deep Blue (#1E3B78)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#E2E9F4] inline-block clay-pill border border-[#CBD5E1]"></span>
-                      <span className="text-xs font-bold text-[#172B4D]">Light Accent (#E2E9F4)</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5 clay-card rounded-2xl space-y-2">
-                  <div className="text-xs font-bold text-[#2C51A2] uppercase tracking-wider">Active Viewport & Zoom Scaling</div>
-                  <p className="text-xs text-[#64748B] leading-relaxed">
-                    Full WCAG 2.1 Reflow support active (fluid 50% to 200% zoom with automatic multi-column wrapping and touch scrolling).
-                  </p>
                 </div>
               </div>
             </Card>

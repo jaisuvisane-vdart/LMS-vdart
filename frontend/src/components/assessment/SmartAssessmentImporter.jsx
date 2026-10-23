@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useDialog } from '../../contexts/DialogContext';
 import assessmentService from '../../services/assessmentService';
+import { downloadBlobFile } from '../../utils/downloadHelper';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Select from '../common/Select';
@@ -143,15 +144,13 @@ const SmartAssessmentImporter = ({
   const handleDownloadTemplate = async (format) => {
     try {
       const res = await assessmentService.downloadImportTemplate(format);
-      const blob = new Blob([res.data]);
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `quiz_import_template.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const mimeTypes = {
+        xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        csv: 'text/csv;charset=utf-8;'
+      };
+      const mime = mimeTypes[format] || 'application/octet-stream';
+      downloadBlobFile(res, `quiz_import_template.${format}`, mime);
     } catch (err) {
       showAlert({
         title: 'Template Download Failed',
@@ -568,7 +567,7 @@ const SmartAssessmentImporter = ({
               isDragging
                 ? 'border-[#2C51A2] bg-[#EFF6FF]'
                 : selectedFile
-                ? 'border-[#10B981] bg-[#F0FDF4]'
+                ? 'border-[#2C51A2] bg-[#EFF6FF]'
                 : 'border-[#CBD5E1] bg-[#F8FAFC] hover:bg-[#EFF6FF]/50 hover:border-[#2C51A2]'
             }`}
           >
@@ -587,7 +586,7 @@ const SmartAssessmentImporter = ({
 
               {selectedFile ? (
                 <div>
-                  <span className="text-xs font-bold text-[#059669] block uppercase tracking-wider">
+                  <span className="text-xs font-bold text-[#2C51A2] block uppercase tracking-wider">
                     Selected File Ready for Analysis
                   </span>
                   <div className="text-sm font-bold text-[#172B4D] mt-1 break-all">
@@ -687,11 +686,11 @@ const SmartAssessmentImporter = ({
               <span className="text-xs text-[#64748B] mt-0.5 block">Document Question Items</span>
             </div>
 
-            <div className="clay-card p-5 rounded-2xl border-t-4 border-[#059669] clay-card-hover">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#059669] block">
+            <div className="clay-card p-5 rounded-2xl border-t-4 border-[#1E3B78] clay-card-hover">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#1E3B78] block">
                 Valid Questions
               </span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#059669] mt-1.5">
+              <div className="text-2xl sm:text-3xl font-extrabold text-[#1E3B78] mt-1.5">
                 {summary.valid_questions}
               </div>
               <span className="text-xs text-[#64748B] mt-0.5 block">Ready for Import</span>
@@ -740,7 +739,7 @@ const SmartAssessmentImporter = ({
                 onClick={() => setActiveFilter('valid')}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-full clay-pill transition-all ${
                   activeFilter === 'valid'
-                    ? 'bg-[#059669] text-white shadow-xs'
+                    ? 'bg-[#1E3B78] text-white shadow-xs'
                     : 'bg-[#F1F5F9] text-[#64748B] hover:bg-[#E2E8F0]'
                 }`}
               >
@@ -999,7 +998,7 @@ const SmartAssessmentImporter = ({
               <span>Cumulative Marks:</span>
               <span>{questions.filter((q) => !q.is_excluded).reduce((acc, q) => acc + (parseInt(q.marks) || 1), 0)} Marks</span>
             </div>
-            <div className="flex justify-between font-bold text-[#059669] pt-2 border-t border-[#BFDBFE]">
+            <div className="flex justify-between font-bold text-[#1E3B78] pt-2 border-t border-[#BFDBFE]">
               <span>Status:</span>
               <span className="uppercase">
                 {targetAssessment ? 'Appended to Active Question Bank' : 'Draft (Instructor Publication Required)'}

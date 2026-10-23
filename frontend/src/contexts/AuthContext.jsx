@@ -39,6 +39,38 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
+    if (res.status === 'success') {
+      if (res.data?.requires_first_login_verification) {
+        return res.data;
+      }
+      if (res.data?.token) {
+        setToken(res.data.token);
+        setUser(res.data.user);
+        localStorage.setItem('lms_token', res.data.token);
+        localStorage.setItem('lms_user', JSON.stringify(res.data.user));
+        return res.data.user;
+      }
+    }
+    throw new Error(res.message || 'Login failed');
+  };
+
+  const requestFirstLoginOtp = async (email) => {
+    const res = await api.post('/auth/request-first-login-otp', { email });
+    if (res.status === 'success') {
+      return res.data;
+    }
+    throw new Error(res.message || 'Failed to dispatch verification code');
+  };
+
+  const completeFirstLogin = (userData, userToken) => {
+    setToken(userToken);
+    setUser(userData);
+    localStorage.setItem('lms_token', userToken);
+    localStorage.setItem('lms_user', JSON.stringify(userData));
+  };
+
+  const loginWithGoogle = async (idToken) => {
+    const res = await api.post('/auth/google-login', { id_token: idToken });
     if (res.status === 'success' && res.data.token) {
       setToken(res.data.token);
       setUser(res.data.user);
@@ -46,7 +78,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('lms_user', JSON.stringify(res.data.user));
       return res.data.user;
     }
-    throw new Error(res.message || 'Login failed');
+    throw new Error(res.message || 'Google authentication failed');
   };
 
   const logout = () => {
@@ -63,7 +95,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, hasRole, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginWithGoogle, requestFirstLoginOtp, completeFirstLogin, logout, hasRole, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );

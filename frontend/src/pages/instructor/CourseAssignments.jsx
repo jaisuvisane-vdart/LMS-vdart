@@ -8,8 +8,10 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import Select from '../../components/common/Select';
 import ProgressBar from '../../components/common/ProgressBar';
 import Pagination from '../../components/common/Pagination';
+import ActionMenu from '../../components/common/ActionMenu';
 import {
   CheckSquare,
   Plus,
@@ -292,24 +294,21 @@ const CourseAssignments = () => {
           <form onSubmit={handleAssignSubmit} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-[#172B4D] mb-1.5">
-                  Select Course <span className="text-[#DC2626]">*</span>
-                </label>
-                <select
+                <Select
+                  label="Select Course"
+                  required
                   value={selectedCourseId}
                   onChange={(e) => setSelectedCourseId(e.target.value)}
-                  className="w-full text-[#172B4D] text-xs font-bold rounded-xl h-11 px-3.5 focus:outline-none clay-input cursor-pointer"
-                  required
-                >
-                  {courses.map((c) => {
+                  placeholder="Select Course..."
+                  options={courses.map((c) => {
                     const isPublished = c.status === 'published';
-                    return (
-                      <option key={c.id} value={c.id} disabled={!isPublished}>
-                        {c.title} {isPublished ? '(Published)' : '(Draft - Publication Required)'}
-                      </option>
-                    );
+                    return {
+                      value: c.id,
+                      label: `${c.title} ${isPublished ? '(Published)' : '(Draft - Publication Required)'}`,
+                      disabled: !isPublished,
+                    };
                   })}
-                </select>
+                />
                 {(() => {
                   const activeC = courses.find((c) => String(c.id) === String(selectedCourseId));
                   if (activeC && activeC.status !== 'published') {
@@ -373,17 +372,15 @@ const CourseAssignments = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                 {/* Department Dropdown Filter */}
-                <select
+                <Select
                   value={selectedDepartment}
                   onChange={(e) => setSelectedDepartment(e.target.value)}
-                  className="w-full text-xs font-bold text-[#2C51A2] rounded-xl h-10 px-3.5 focus:outline-none clay-input cursor-pointer"
-                >
-                  {availableDepartments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="All Departments"
+                  options={availableDepartments.map((dept) => ({
+                    value: dept,
+                    label: dept,
+                  }))}
+                />
 
                 {/* Text Search Filter */}
                 <input
@@ -539,53 +536,55 @@ const CourseAssignments = () => {
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full md:w-auto">
           {/* Course Filter Dropdown */}
-          <select
-            value={courseFilter}
-            onChange={(e) => setCourseFilter(e.target.value)}
-            className="h-11 px-3.5 rounded-xl text-xs font-bold text-[#2C51A2] clay-input cursor-pointer max-w-xs"
-          >
-            <option value="">All Courses ({courses.length})</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
-            ))}
-          </select>
+          <div className="w-full sm:w-64">
+            <Select
+              value={courseFilter}
+              onChange={(e) => setCourseFilter(e.target.value)}
+              placeholder={`All Courses (${courses.length})`}
+              options={[
+                { value: '', label: `All Courses (${courses.length})` },
+                ...courses.map((c) => ({ value: c.id, label: c.title })),
+              ]}
+            />
+          </div>
 
           {/* Status Filter Dropdown */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-11 px-3.5 rounded-xl text-xs font-bold text-[#2C51A2] clay-input cursor-pointer"
-          >
-            <option value="">All Statuses</option>
-            <option value="assigned">Assigned</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="overdue">Overdue</option>
-          </select>
+          <div className="w-full sm:w-44">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              placeholder="All Statuses"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'assigned', label: 'Assigned' },
+                { value: 'in_progress', label: 'In Progress' },
+                { value: 'completed', label: 'Completed' },
+                { value: 'overdue', label: 'Overdue' },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
       {/* Assignments Table with Minimal Clay Surface */}
       <div className="clay-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
-          <table className="w-full text-left border-collapse text-xs min-w-[760px]">
+          <table className="w-full text-center border-collapse text-xs min-w-[760px]">
             <thead>
               <tr 
-                className="text-white uppercase tracking-wider font-bold text-[11px]"
+                className="text-white uppercase tracking-wider font-bold text-[11px] text-center"
                 style={{
                   background: 'linear-gradient(160deg, #1E3B78 0%, #2C51A2 100%)',
                   boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)'
                 }}
               >
-                <th className="py-3.5 px-4">Trainee Employee</th>
-                <th className="py-3.5 px-4">Department</th>
-                <th className="py-3.5 px-4">Assigned Course</th>
-                <th className="py-3.5 px-4">Assigned / Due</th>
-                <th className="py-3.5 px-4 w-44">Module Progress</th>
+                <th className="py-3.5 px-4 text-center">Trainee Employee</th>
+                <th className="py-3.5 px-4 text-center">Department</th>
+                <th className="py-3.5 px-4 text-center">Assigned Course</th>
+                <th className="py-3.5 px-4 text-center">Assigned / Due</th>
+                <th className="py-3.5 px-4 text-center w-44">Module Progress</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]/70">
@@ -604,7 +603,7 @@ const CourseAssignments = () => {
               ) : (
                 paginatedAssignments.map((item) => (
                   <tr key={item.id} className="hover:bg-[#EFF6FF]/60 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-[#172B4D]">
+                    <td className="py-3.5 px-4 font-bold text-[#172B4D] text-left">
                       <div className="flex items-center gap-2.5">
                         <div 
                           className="w-7 h-7 rounded-full text-white flex items-center justify-center font-bold text-xs shrink-0"
@@ -615,7 +614,7 @@ const CourseAssignments = () => {
                         >
                           {item.learner_name?.charAt(0) || 'U'}
                         </div>
-                        <div>
+                        <div className="text-left">
                           <div>{item.learner_name}</div>
                           <div className="text-[10px] text-[#64748B] font-mono">
                             {item.learner_employee_id}
@@ -623,23 +622,23 @@ const CourseAssignments = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-[#172B4D] font-bold">
+                    <td className="py-3.5 px-4 text-[#172B4D] font-bold text-center">
                       {item.learner_department || 'General Trainee'}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 text-center">
                       <div className="font-bold text-[#172B4D]">{item.course_title}</div>
-                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <div className="flex items-center justify-center gap-1.5 mt-0.5 flex-wrap">
                         <span className="text-[10px] text-[#2C51A2] font-bold uppercase">{item.course_category}</span>
                         <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full ${
                           item.course_type === 'certified' || !item.course_type
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-blue-50 text-[#1E3B78] border border-blue-200'
                             : 'bg-slate-100 text-slate-700 border border-slate-300'
                         }`}>
                           {item.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-[11px] text-[#64748B]">
+                    <td className="py-3.5 px-4 text-[11px] text-[#64748B] text-center">
                       <div className="font-mono">Assigned: {item.assigned_at?.slice(0, 10)}</div>
                       {item.due_date ? (
                         <div className="text-[#B45309] font-bold font-mono">Due: {item.due_date}</div>
@@ -647,7 +646,7 @@ const CourseAssignments = () => {
                         <div className="text-[#94A3B8]">Self-paced</div>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 text-center">
                       <ProgressBar value={parseFloat(item.progress_percentage || 0)} showLabel height="h-2" />
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -665,13 +664,17 @@ const CourseAssignments = () => {
                         {item.status?.replace('_', ' ')}
                       </Badge>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        icon={Trash2}
-                        onClick={() => handleDeleteAssignment(item.id, item.learner_name)}
-                        title="Unenroll Trainee"
+                    <td className="py-3.5 px-4 text-center">
+                      <ActionMenu
+                        triggerTitle={`Actions for ${item.learner_name}`}
+                        items={[
+                          {
+                            label: 'Unenroll Trainee',
+                            icon: Trash2,
+                            variant: 'danger',
+                            onClick: () => handleDeleteAssignment(item.id, item.learner_name),
+                          },
+                        ]}
                       />
                     </td>
                   </tr>

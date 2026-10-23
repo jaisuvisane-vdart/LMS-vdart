@@ -450,7 +450,7 @@ const AssessmentBuilder = () => {
 
         {/* Assessment Form Card */}
         <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleSaveAssessment} className="space-y-5 max-w-2xl">
+          <form onSubmit={handleSaveAssessment} className="space-y-5 w-full">
             <Select
               label="Associated Training Course"
               value={formData.course_id}
@@ -574,7 +574,7 @@ const AssessmentBuilder = () => {
             )}
           </div>
 
-          <form onSubmit={handleSaveQuestion} className="space-y-4 max-w-3xl">
+          <form onSubmit={handleSaveQuestion} className="space-y-4 w-full">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="sm:col-span-3">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-[#172B4D] mb-1.5">

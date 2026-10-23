@@ -53,6 +53,7 @@ CREATE TABLE users (
     designation VARCHAR(100) NULL,
     phone VARCHAR(20) NULL,
     status ENUM('active', 'inactive', 'suspended') NOT NULL DEFAULT 'active',
+    is_first_login TINYINT(1) NOT NULL DEFAULT 1,
     avatar_url VARCHAR(255) NULL,
     last_login_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -154,6 +155,7 @@ CREATE TABLE course_assignments (
     status ENUM('assigned', 'in_progress', 'completed', 'overdue') NOT NULL DEFAULT 'assigned',
     progress_percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     completed_at DATETIME NULL,
+    updated_by_admin TINYINT(1) NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_assignments_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -380,9 +382,25 @@ CREATE TABLE IF NOT EXISTS assessment_imports (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
+-- 18. USER OTPS TABLE
+-- Stores email 6-digit OTP verification codes for first-time login onboarding and credential verification
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS user_otps (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    otp_code VARCHAR(10) NOT NULL,
+    purpose ENUM('first_login_verification', 'password_reset') NOT NULL DEFAULT 'first_login_verification',
+    expires_at DATETIME NOT NULL,
+    consumed TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_otps_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    INDEX idx_user_otps_lookup (user_id, otp_code, consumed)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------------------------
 -- DEFAULT SEED DATA
 -- Baseline roles and master administrator account
--- Initial admin credentials: admin@lms.local / Admin@123
+-- Initial admin credentials: admin@vdartinc.com / Admin@123
 -- Password hash generated with PHP password_hash('Admin@123', PASSWORD_BCRYPT)
 -- ------------------------------------------------------------------------------
 INSERT INTO roles (id, name, display_name, description) VALUES
@@ -391,6 +409,6 @@ INSERT INTO roles (id, name, display_name, description) VALUES
 (3, 'learner', 'Trainee Employee', 'Access assigned courses, study lessons, complete materials, and take assessments');
 
 INSERT INTO users (id, role_id, employee_id, first_name, last_name, email, password_hash, department, designation, phone, status) VALUES
-(1, 1, 'EMP001', 'System', 'Admin', 'admin@lms.local', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Information Technology', 'LMS Administrator', '+1-555-0100', 'active'),
-(2, 2, 'EMP002', 'Sarah', 'Jenkins', 'instructor@lms.local', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Engineering Training', 'Lead Technical Trainer', '+1-555-0101', 'active'),
-(3, 3, 'EMP003', 'Alex', 'Morgan', 'learner@lms.local', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Software Development', 'Graduate Trainee', '+1-555-0102', 'active');
+(1, 1, 'EMP001', 'System', 'Admin', 'admin@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Information Technology', 'LMS Administrator', '+1-555-0100', 'active'),
+(2, 2, 'EMP002', 'Sarah', 'Jenkins', 'instructor@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Engineering Training', 'Lead Technical Trainer', '+1-555-0101', 'active'),
+(3, 3, 'EMP003', 'Alex', 'Morgan', 'learner@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Software Development', 'Graduate Trainee', '+1-555-0102', 'active');

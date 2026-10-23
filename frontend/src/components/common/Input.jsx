@@ -17,6 +17,7 @@ const Input = ({
   helperText = '',
   className = '',
   icon: Icon = null,
+  ...rest
 }) => {
   return (
     <div className={`w-full ${className}`}>
@@ -47,6 +48,7 @@ const Input = ({
               ? 'border-[#DC2626] focus:border-[#DC2626] focus:ring-2 focus:ring-[#DC2626]/20'
               : ''
           } disabled:bg-[#F1F5F9] disabled:text-[#94A3B8] disabled:cursor-not-allowed`}
+          {...rest}
         />
       </div>
       {error && <p className="mt-1 text-xs text-[#DC2626] font-medium">{error}</p>}

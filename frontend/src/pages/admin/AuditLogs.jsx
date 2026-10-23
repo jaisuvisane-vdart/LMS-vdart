@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import auditService from '../../services/auditService';
+import { exportToCsv } from '../../utils/downloadHelper';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
+import ActionMenu from '../../components/common/ActionMenu';
 import {
   ShieldCheck,
   Search,
@@ -16,7 +18,8 @@ import {
   Database,
   Lock,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Download
 } from 'lucide-react';
 
 const AuditLogs = () => {
@@ -68,6 +71,32 @@ const AuditLogs = () => {
   const handleInspect = (log) => {
     setSelectedLog(log);
     setViewMode('detail');
+  };
+
+  const handleExportCSV = () => {
+    try {
+      const headers = [
+        'Timestamp',
+        'Actor Name',
+        'Actor Email',
+        'Action',
+        'Entity Type',
+        'Entity ID',
+        'Client IP'
+      ];
+      const rows = (logs || []).map((log) => [
+        log.created_at || '',
+        log.actor_name || '',
+        log.actor_email || '',
+        log.action || '',
+        log.entity_type || '',
+        log.entity_id ?? '',
+        log.ip_address || ''
+      ]);
+      exportToCsv('audit_logs_report.csv', headers, rows);
+    } catch (err) {
+      console.error('Failed to export audit logs CSV:', err);
+    }
   };
 
   const getActionBadgeVariant = (action) => {
@@ -125,7 +154,7 @@ const AuditLogs = () => {
         </div>
 
         {/* Audit Event Detail Card */}
-        <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm space-y-5 max-w-3xl">
+        <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm space-y-5 w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs clay-card p-5 rounded-xl">
             <div>
               <span className="text-[#64748B] font-semibold block">Actor:</span>
@@ -191,6 +220,11 @@ const AuditLogs = () => {
             Cryptographically timestamped audit trail of administrative modifications, user authentications, and assessment submissions.
           </p>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="secondary" size="sm" icon={Download} onClick={handleExportCSV}>
+            Export CSV ({logs.length})
+          </Button>
+        </div>
       </div>
 
       {/* Filter Toolbar with Minimal Clay Surface */}
@@ -239,21 +273,21 @@ const AuditLogs = () => {
       {/* Audit Log Table with Minimal Clay Surface */}
       <div className="clay-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
-          <table className="w-full text-left border-collapse min-w-[760px]">
+          <table className="w-full text-center border-collapse min-w-[760px]">
             <thead>
               <tr 
-                className="text-white text-[11px] font-bold uppercase tracking-wider"
+                className="text-white text-[11px] font-bold uppercase tracking-wider text-center"
                 style={{
                   background: 'linear-gradient(160deg, #1E3B78 0%, #2C51A2 100%)',
                   boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)'
                 }}
               >
-                <th className="py-3.5 px-4">Timestamp (UTC)</th>
-                <th className="py-3.5 px-4">Actor</th>
-                <th className="py-3.5 px-4">Action Event</th>
-                <th className="py-3.5 px-4">Target Entity</th>
-                <th className="py-3.5 px-4">IP Address</th>
-                <th className="py-3.5 px-4 text-right">Payload Details</th>
+                <th className="py-3.5 px-4 text-center">Timestamp (UTC)</th>
+                <th className="py-3.5 px-4 text-center">Actor</th>
+                <th className="py-3.5 px-4 text-center">Action Event</th>
+                <th className="py-3.5 px-4 text-center">Target Entity</th>
+                <th className="py-3.5 px-4 text-center">IP Address</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]/70 text-xs font-mono">
@@ -272,10 +306,10 @@ const AuditLogs = () => {
               ) : (
                 paginatedLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-[#EFF6FF]/60 transition-colors">
-                    <td className="py-3 px-4 text-[#64748B] whitespace-nowrap">
+                    <td className="py-3 px-4 text-[#64748B] whitespace-nowrap text-center">
                       {log.created_at}
                     </td>
-                    <td className="py-3 px-4 font-sans">
+                    <td className="py-3 px-4 font-sans text-left">
                       <div className="font-bold text-[#172B4D]">
                         {log.actor_name || 'System / Anonymous'}
                       </div>
@@ -283,12 +317,12 @@ const AuditLogs = () => {
                         {log.actor_email || 'internal'}
                       </div>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3 px-4 text-center">
                       <Badge variant={getActionBadgeVariant(log.action)}>
                         {log.action}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-[#172B4D] font-sans">
+                    <td className="py-3 px-4 text-[#172B4D] font-sans text-center">
                       <span className="font-bold text-[#2C51A2]">{log.entity_type}</span>
                       {log.entity_id && (
                         <span className="text-[10px] text-[#64748B] font-mono ml-1.5">
@@ -296,18 +330,20 @@ const AuditLogs = () => {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-[#64748B]">
+                    <td className="py-3 px-4 text-[#64748B] text-center">
                       {log.ip_address || '127.0.0.1'}
                     </td>
-                    <td className="py-3 px-4 text-right font-sans">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={Eye}
-                        onClick={() => handleInspect(log)}
-                      >
-                        Inspect Payload
-                      </Button>
+                    <td className="py-3 px-4 text-center font-sans">
+                      <ActionMenu
+                        triggerTitle="Audit Log Actions"
+                        items={[
+                          {
+                            label: 'Inspect Payload',
+                            icon: Eye,
+                            onClick: () => handleInspect(log),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))

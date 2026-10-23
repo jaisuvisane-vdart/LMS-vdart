@@ -48,7 +48,7 @@ const AlertDialog = ({
       case 'confirm':
         return <AlertTriangle className="w-5 h-5 text-[#D97706]" />;
       case 'success':
-        return <CheckCircle className="w-5 h-5 text-[#059669]" />;
+        return <CheckCircle className="w-5 h-5 text-[#2C51A2]" />;
       default:
         return <Info className="w-5 h-5 text-[#2C51A2]" />;
     }

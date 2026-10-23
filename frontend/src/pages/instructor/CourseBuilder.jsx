@@ -442,7 +442,7 @@ const CourseBuilder = () => {
         </div>
 
         <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleSaveModule} className="space-y-4 max-w-2xl">
+          <form onSubmit={handleSaveModule} className="space-y-4 w-full">
             <Input
               label="Module Title"
               required
@@ -511,7 +511,7 @@ const CourseBuilder = () => {
         </div>
 
         <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleSaveLesson} className="space-y-4 max-w-3xl">
+          <form onSubmit={handleSaveLesson} className="space-y-4 w-full">
             <Input
               label="Lesson Title"
               required
@@ -606,7 +606,7 @@ const CourseBuilder = () => {
         </div>
 
         <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleUploadMaterial} className="space-y-4 max-w-2xl">
+          <form onSubmit={handleUploadMaterial} className="space-y-4 w-full">
             <div className="p-4.5 clay-card rounded-2xl">
               <h4 className="text-xs font-bold uppercase text-[#2C51A2] mb-1">
                 Course Material File Upload
@@ -698,17 +698,17 @@ const CourseBuilder = () => {
           <label className="text-xs font-bold uppercase tracking-wider text-[#172B4D] shrink-0">
             Active Program:
           </label>
-          <select
-            value={selectedCourseId}
-            onChange={(e) => setSelectedCourseId(e.target.value)}
-            className="h-11 px-3.5 rounded-xl text-xs font-bold text-[#2C51A2] clay-input cursor-pointer min-w-[240px]"
-          >
-            {coursesList.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title} ({c.status})
-              </option>
-            ))}
-          </select>
+          <div className="min-w-[260px]">
+            <Select
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+              placeholder="Select Course..."
+              options={coursesList.map((c) => ({
+                value: c.id,
+                label: `${c.title} (${c.status})`,
+              }))}
+            />
+          </div>
         </div>
       </div>
 
@@ -733,7 +733,7 @@ const CourseBuilder = () => {
                   </span>
                   <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full clay-pill ${
                     course.course_type === 'certified' || !course.course_type
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      ? 'bg-blue-50 text-[#1E3B78] border border-blue-200'
                       : 'bg-slate-100 text-slate-700 border border-slate-300'
                   }`}>
                     {course.course_type === 'non_certified' ? 'Non-Certified Program' : 'Certified Program'}

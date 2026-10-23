@@ -8,6 +8,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
+import ActionMenu from '../../components/common/ActionMenu';
 import {
   BookOpen,
   Plus,
@@ -267,7 +268,7 @@ const InstructorCourses = () => {
 
         {/* Full Page Course Creation Card */}
         <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 shadow-sm">
-          <form onSubmit={handleCreateCourse} className="space-y-5 max-w-3xl">
+          <form onSubmit={handleCreateCourse} className="space-y-5 w-full">
             <Input
               label="Course Title"
               required
@@ -505,32 +506,33 @@ const InstructorCourses = () => {
       {/* Courses Data Table */}
       <div className="clay-card rounded-2xl border border-white/60 overflow-hidden shadow-sm">
         <div className="overflow-x-auto touch-scroll">
-          <table className="w-full text-left border-collapse text-xs min-w-[840px]">
+          <table className="w-full text-center border-collapse text-xs min-w-[840px]">
             <thead>
               <tr
-                className="text-white uppercase tracking-wider font-bold text-[11px]"
+                className="text-white uppercase tracking-wider font-bold text-[11px] text-center"
                 style={{
                   background: 'linear-gradient(160deg, #1E3B78 0%, #2C51A2 100%)',
                   boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)',
                 }}
               >
-                <th className="py-3.5 px-4">Course Details & Category</th>
+                <th className="py-3.5 px-4 text-center">Course Details & Category</th>
+                <th className="py-3.5 px-4 text-center">Course Type</th>
                 <th className="py-3.5 px-4 text-center">Structure</th>
                 <th className="py-3.5 px-4 text-center">Duration & Benchmark</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]/70">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="py-12 text-center text-[#64748B]">
+                  <td colSpan="6" className="py-12 text-center text-[#64748B]">
                     Loading your authored courses...
                   </td>
                 </tr>
               ) : courses.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-12 text-center">
+                  <td colSpan="6" className="py-12 text-center">
                     <BookOpen className="w-10 h-10 text-[#64748B] mx-auto mb-3 opacity-60" />
                     <h3 className="text-base font-bold text-[#1E3B78]">No Authored Courses Found</h3>
                     <p className="text-xs text-[#64748B] mt-1 mb-4">You have not created any training programs yet.</p>
@@ -541,7 +543,7 @@ const InstructorCourses = () => {
                 </tr>
               ) : filteredCourses.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-12 text-center">
+                  <td colSpan="6" className="py-12 text-center">
                     <Filter className="w-10 h-10 text-[#64748B] mx-auto mb-3 opacity-60" />
                     <h3 className="text-base font-bold text-[#1E3B78]">No Courses Match Filter Criteria</h3>
                     <p className="text-xs text-[#64748B] mt-1 mb-4">
@@ -556,7 +558,7 @@ const InstructorCourses = () => {
                 paginatedCourses.map((course) => (
                   <tr key={course.id} className="hover:bg-[#EFF6FF]/60 transition-colors">
                     {/* Course Title & Category */}
-                    <td className="py-3.5 px-4 max-w-sm">
+                    <td className="py-3.5 px-4 text-left">
                       <div className="font-bold text-sm text-[#172B4D] leading-snug">
                         {course.title}
                       </div>
@@ -564,19 +566,18 @@ const InstructorCourses = () => {
                         <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#E2E9F4] text-[#1E3B78] px-2.5 py-0.5 rounded-full">
                           {course.category}
                         </span>
-                        <span className={`clay-pill text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
-                          course.course_type === 'certified' || !course.course_type
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-700 border border-slate-300'
-                        }`}>
-                          {course.course_type === 'non_certified' ? 'Non Certified' : 'Certified'}
-                        </span>
-                        {course.description && (
-                          <span className="text-[11px] text-[#64748B] truncate max-w-xs font-medium">
-                            {course.description}
-                          </span>
-                        )}
                       </div>
+                    </td>
+
+                    {/* Dedicated Course Type Column */}
+                    <td className="py-3.5 px-4 text-center">
+                      <span className={`clay-pill text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full inline-flex items-center ${
+                        course.course_type === 'certified' || !course.course_type
+                          ? 'bg-blue-50 text-[#1E3B78] border border-blue-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}>
+                        {course.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}
+                      </span>
                     </td>
 
                     {/* Structure: Modules & Lessons */}
@@ -607,52 +608,45 @@ const InstructorCourses = () => {
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                        <Button
-                          variant={course.status === 'published' ? 'secondary' : 'primary'}
-                          size="sm"
-                          onClick={() => handleTogglePublish(course)}
-                        >
-                          {course.status === 'published' ? 'Unpublish' : 'Publish'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={Users}
-                          disabled={course.status !== 'published'}
-                          onClick={() => {
-                            if (course.status !== 'published') {
-                              showAlert({
-                                title: 'Publication Required',
-                                message: 'This course is in draft. Please publish the course before assigning it to learners.',
-                                type: 'warning',
-                              });
-                              return;
-                            }
-                            navigate(`/instructor/assignments?courseId=${course.id}&openAssign=1`);
-                          }}
-                          className={course.status !== 'published' ? 'opacity-50 cursor-not-allowed' : ''}
-                          title={course.status !== 'published' ? 'Publish course first to unlock trainee assignment' : 'Assign trainees'}
-                        >
-                          Assign
-                        </Button>
-                        <Button
-                          variant="navy"
-                          size="sm"
-                          icon={Layers}
-                          onClick={() => navigate(`/instructor/course-builder?courseId=${course.id}`)}
-                        >
-                          Studio
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          icon={Trash2}
-                          onClick={() => handleDeleteCourse(course.id, course.title)}
-                          title="Delete Course"
-                        />
-                      </div>
+                    <td className="py-3.5 px-4 text-center">
+                      <ActionMenu
+                        triggerTitle={`Actions for ${course.title}`}
+                        items={[
+                          {
+                            label: course.status === 'published' ? 'Unpublish Course' : 'Publish Course',
+                            icon: course.status === 'published' ? Clock : CheckCircle,
+                            onClick: () => handleTogglePublish(course),
+                          },
+                          {
+                            label: 'Assign Trainees',
+                            icon: Users,
+                            disabled: course.status !== 'published',
+                            title: course.status !== 'published' ? 'Publish course first to unlock trainee assignment' : 'Assign trainees',
+                            onClick: () => {
+                              if (course.status !== 'published') {
+                                showAlert({
+                                  title: 'Publication Required',
+                                  message: 'This course is in draft. Please publish the course before assigning it to learners.',
+                                  type: 'warning',
+                                });
+                                return;
+                              }
+                              navigate(`/instructor/assignments?courseId=${course.id}&openAssign=1`);
+                            },
+                          },
+                          {
+                            label: 'Course Studio',
+                            icon: Layers,
+                            onClick: () => navigate(`/instructor/course-builder?courseId=${course.id}`),
+                          },
+                          {
+                            label: 'Delete Course',
+                            icon: Trash2,
+                            variant: 'danger',
+                            onClick: () => handleDeleteCourse(course.id, course.title),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))

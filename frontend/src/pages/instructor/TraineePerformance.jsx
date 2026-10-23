@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useDialog } from '../../contexts/DialogContext';
 import assessmentService from '../../services/assessmentService';
 import courseService from '../../services/courseService';
+import { exportToCsv } from '../../utils/downloadHelper';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
+import ActionMenu from '../../components/common/ActionMenu';
 import {
   Award,
   Users,
@@ -19,7 +21,8 @@ import {
   Filter,
   BarChart3,
   HelpCircle,
-  ArrowLeft
+  ArrowLeft,
+  Download
 } from 'lucide-react';
 
 const TraineePerformance = () => {
@@ -107,6 +110,40 @@ const TraineePerformance = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    try {
+      const headers = [
+        'Trainee Name',
+        'Trainee Email',
+        'Department',
+        'Course Title',
+        'Assessment Title',
+        'Attempt Number',
+        'Score Obtained',
+        'Max Score',
+        'Percentage',
+        'Outcome',
+        'Date Submitted'
+      ];
+      const rows = (attempts || []).map((att) => [
+        att.learner_name || '',
+        att.learner_email || '',
+        att.learner_department || '',
+        att.course_title || '',
+        att.assessment_title || '',
+        att.attempt_number ?? 1,
+        att.total_score ?? 0,
+        att.max_score ?? 0,
+        `${parseFloat(att.percentage || 0).toFixed(1)}%`,
+        att.is_passed == 1 ? 'PASSED' : 'FAILED',
+        att.submitted_at || att.created_at || ''
+      ]);
+      exportToCsv('trainee_performance_report.csv', headers, rows);
+    } catch (err) {
+      console.error('Failed to export performance CSV:', err);
+    }
+  };
+
   // Metrics
   const totalPassed = attempts.filter((a) => a.is_passed == 1).length;
   const passRate = attempts.length > 0 ? ((totalPassed / attempts.length) * 100).toFixed(0) : 0;
@@ -149,7 +186,7 @@ const TraineePerformance = () => {
             Loading scorecard audit records...
           </div>
         ) : (
-          <div className="space-y-6 max-w-4xl">
+          <div className="space-y-6 w-full">
             {/* Header Score Summary Banner */}
             <div
               className={`p-6 rounded-2xl border ${
@@ -278,6 +315,11 @@ const TraineePerformance = () => {
             Audit objective exam attempts, evaluate individual answers, monitor pass/fail outcomes, and track trainee progress.
           </p>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="secondary" size="sm" icon={Download} onClick={handleExportCSV}>
+            Export CSV ({attempts.length})
+          </Button>
+        </div>
       </div>
 
       {/* KPI Metrics */}
@@ -365,17 +407,17 @@ const TraineePerformance = () => {
       {/* Attempts Table */}
       <div className="clay-card rounded-2xl border border-white/60 overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
-          <table className="w-full text-left border-collapse min-w-[760px]">
+          <table className="w-full text-center border-collapse min-w-[760px]">
             <thead>
-              <tr className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white text-[11px] font-bold uppercase tracking-wider">
-                <th className="py-3.5 px-4">Trainee Employee</th>
-                <th className="py-3.5 px-4">Course & Assessment</th>
+              <tr className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white text-[11px] font-bold uppercase tracking-wider text-center">
+                <th className="py-3.5 px-4 text-center">Trainee Employee</th>
+                <th className="py-3.5 px-4 text-center">Course & Assessment</th>
                 <th className="py-3.5 px-4 text-center">Attempt</th>
                 <th className="py-3.5 px-4 text-center">Score / Total</th>
                 <th className="py-3.5 px-4 text-center">Percentage</th>
                 <th className="py-3.5 px-4 text-center">Outcome</th>
-                <th className="py-3.5 px-4">Date Submitted</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4 text-center">Date Submitted</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]/70 text-xs">
@@ -397,14 +439,14 @@ const TraineePerformance = () => {
                   const isPassed = att.is_passed == 1;
                   return (
                     <tr key={att.id} className="hover:bg-[#F3F6FB]/80 transition-colors">
-                      <td className="py-3 px-4">
+                      <td className="py-3 px-4 text-left">
                         <div className="font-bold text-[#1E3B78]">{att.learner_name}</div>
                         <div className="text-[11px] text-[#64748B]">{att.learner_email}</div>
                         {att.learner_department && (
                           <span className="text-[10px] text-[#2C51A2] font-semibold">{att.learner_department}</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 max-w-xs">
+                      <td className="py-3 px-4 max-w-xs text-center">
                         <div className="font-bold text-[#172B4D] truncate">{att.assessment_title}</div>
                         <div className="text-[11px] text-[#64748B] truncate">{att.course_title}</div>
                       </td>
@@ -428,19 +470,23 @@ const TraineePerformance = () => {
                           <Badge variant="error">Failed</Badge>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-[#64748B]">
+                      <td className="py-3 px-4 text-[#64748B] text-center">
                         {att.submitted_at || att.started_at}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        {att.status === 'completed' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            icon={Eye}
-                            onClick={() => handleInspectScorecard(att.id)}
-                          >
-                            Scorecard
-                          </Button>
+                      <td className="py-3 px-4 text-center">
+                        {att.status === 'completed' ? (
+                          <ActionMenu
+                            triggerTitle="Scorecard Actions"
+                            items={[
+                              {
+                                label: 'View Scorecard',
+                                icon: Eye,
+                                onClick: () => handleInspectScorecard(att.id),
+                              },
+                            ]}
+                          />
+                        ) : (
+                          <span className="text-[#94A3B8] text-[11px] italic">In Progress</span>
                         )}
                       </td>
                     </tr>

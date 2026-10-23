@@ -121,7 +121,7 @@ const LearnerCourses = () => {
                     </span>
                     <span className={`clay-pill text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
                       item.course_type === 'certified' || !item.course_type
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        ? 'bg-blue-50 text-[#1E3B78] border border-blue-200'
                         : 'bg-slate-100 text-slate-700 border border-slate-300'
                     }`}>
                       {item.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}

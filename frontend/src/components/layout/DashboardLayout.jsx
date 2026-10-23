@@ -46,9 +46,9 @@ const DashboardLayout = () => {
           onToggleSidebar={handleToggleSidebar}
         />
 
-        {/* Dynamic Page Content */}
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-7 bg-[#F3F6FB] min-w-0 touch-scroll">
-          <div key={location.pathname} className="max-w-7xl mx-auto w-full min-w-0 animate-page-enter">
+        {/* Dynamic Page Content - Full Width Fluid Canvas */}
+        <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-6 bg-[#F3F6FB] min-w-0 touch-scroll">
+          <div key={location.pathname} className="w-full min-w-0 animate-page-enter">
             <Outlet />
           </div>
         </main>

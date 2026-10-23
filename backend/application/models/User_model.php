@@ -24,7 +24,7 @@ class User_model extends CI_Model {
      * Find user by ID
      */
     public function get_by_id($id) {
-        $this->db->select('u.id, u.role_id, u.employee_id, u.first_name, u.last_name, u.email, u.department, u.designation, u.phone, u.status, u.avatar_url, u.last_login_at, r.name as role, r.display_name as role_display_name');
+        $this->db->select('u.id, u.role_id, u.employee_id, u.first_name, u.last_name, u.email, u.department, u.designation, u.phone, u.status, u.is_first_login, u.avatar_url, u.last_login_at, r.name as role, r.display_name as role_display_name');
         $this->db->from('users u');
         $this->db->join('roles r', 'r.id = u.role_id');
         $this->db->where('u.id', (int)$id);
@@ -106,11 +106,12 @@ class User_model extends CI_Model {
             'first_name'    => trim($data['first_name'] ?? ''),
             'last_name'     => trim($data['last_name'] ?? ''),
             'email'         => strtolower(trim($data['email'] ?? '')),
-            'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+            'password_hash' => password_hash(!empty($data['password']) ? $data['password'] : 'Welcome@123', PASSWORD_BCRYPT),
             'department'    => trim($data['department'] ?? ''),
             'designation'   => trim($data['designation'] ?? ''),
             'phone'         => trim($data['phone'] ?? ''),
             'status'        => in_array($data['status'] ?? '', ['active', 'inactive', 'suspended']) ? $data['status'] : 'active',
+            'is_first_login'=> 1,
             'created_at'    => date('Y-m-d H:i:s'),
         ];
 
@@ -132,8 +133,11 @@ class User_model extends CI_Model {
         if (isset($data['designation'])) $update['designation'] = trim($data['designation']);
         if (isset($data['phone'])) $update['phone'] = trim($data['phone']);
         if (isset($data['status'])) $update['status'] = $data['status'];
+        if (isset($data['is_first_login'])) $update['is_first_login'] = (int)$data['is_first_login'];
 
-        if (!empty($data['password'])) {
+        if (!empty($data['password_hash'])) {
+            $update['password_hash'] = $data['password_hash'];
+        } elseif (!empty($data['password'])) {
             $update['password_hash'] = password_hash($data['password'], PASSWORD_BCRYPT);
         }
 
@@ -154,6 +158,29 @@ class User_model extends CI_Model {
         }
         $this->db->where('id', (int)$id);
         return $this->db->update('users', ['status' => $status]);
+    }
+
+    /**
+     * Permanently delete a user account and reassign authored courses/assignments to admin
+     */
+    public function delete_user($id, $admin_id) {
+        $id = (int)$id;
+        $admin_id = (int)$admin_id;
+
+        $this->db->trans_start();
+
+        // 1. Reassign any courses authored by this user to the administering account
+        $this->db->where('instructor_id', $id)->update('courses', ['instructor_id' => $admin_id]);
+
+        // 2. Reassign course assignments where this user was the assigner
+        $this->db->where('assigned_by', $id)->update('course_assignments', ['assigned_by' => $admin_id]);
+
+        // 3. Delete the user (cascades to assignments, progress, attempts, notifications, certificates, otps)
+        $this->db->where('id', $id)->delete('users');
+
+        $this->db->trans_complete();
+
+        return $this->db->trans_status();
     }
 
     /**

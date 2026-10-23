@@ -8,6 +8,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
+import ActionMenu from '../../components/common/ActionMenu';
 import {
   BookOpen,
   Plus,
@@ -198,7 +199,7 @@ const AllCourses = () => {
 
         {/* Full Page Course Creation Card */}
         <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleCreateCourse} className="space-y-5 max-w-3xl">
+          <form onSubmit={handleCreateCourse} className="space-y-5 w-full">
             <Input
               label="Course Title"
               required
@@ -316,94 +317,106 @@ const AllCourses = () => {
         </form>
 
         <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full md:w-auto">
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="h-11 px-3.5 rounded-xl text-xs font-bold text-[#2C51A2] clay-input cursor-pointer w-full sm:w-auto"
-          >
-            <option value="">All Types</option>
-            <option value="certified">Certified</option>
-            <option value="non_certified">Non Certified</option>
-          </select>
+          <div className="w-full sm:w-36">
+            <Select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              placeholder="All Types"
+              options={[
+                { value: '', label: 'All Types' },
+                { value: 'certified', label: 'Certified' },
+                { value: 'non_certified', label: 'Non Certified' },
+              ]}
+            />
+          </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-11 px-3.5 rounded-xl text-xs font-bold text-[#2C51A2] clay-input cursor-pointer w-full sm:w-auto"
-          >
-            <option value="">All Statuses</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-            <option value="archived">Archived</option>
-          </select>
+          <div className="w-full sm:w-40">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              placeholder="All Statuses"
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'published', label: 'Published' },
+                { value: 'draft', label: 'Draft' },
+                { value: 'archived', label: 'Archived' },
+              ]}
+            />
+          </div>
 
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="h-11 px-3.5 rounded-xl text-xs font-bold text-[#2C51A2] clay-input cursor-pointer w-full sm:w-auto"
-          >
-            <option value="">All Categories</option>
-            <option value="Software Engineering">Software Engineering</option>
-            <option value="Frontend Engineering">Frontend Engineering</option>
-            <option value="Information Security">Information Security</option>
-            <option value="Corporate Compliance">Corporate Compliance</option>
-            <option value="Quality Assurance">Quality Assurance</option>
-          </select>
+          <div className="w-full sm:w-56">
+            <Select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              placeholder="All Categories"
+              options={[
+                { value: '', label: 'All Categories' },
+                { value: 'Software Engineering', label: 'Software Engineering' },
+                { value: 'Frontend Engineering', label: 'Frontend Engineering' },
+                { value: 'Information Security', label: 'Information Security' },
+                { value: 'Corporate Compliance', label: 'Corporate Compliance' },
+                { value: 'Quality Assurance', label: 'Quality Assurance' },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
       {/* Courses Data Grid with Minimal Clay Surface */}
       <div className="clay-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
-          <table className="w-full text-left border-collapse text-xs min-w-[720px]">
+          <table className="w-full text-center border-collapse text-xs min-w-[720px]">
             <thead>
               <tr 
-                className="text-white uppercase tracking-wider font-bold text-[11px]"
+                className="text-white uppercase tracking-wider font-bold text-[11px] text-center"
                 style={{
                   background: 'linear-gradient(160deg, #1E3B78 0%, #2C51A2 100%)',
                   boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)'
                 }}
               >
-                <th className="py-3.5 px-4">Course Title & Category</th>
-                <th className="py-3.5 px-4">Author / Instructor</th>
+                <th className="py-3.5 px-4 text-center">Course Title & Category</th>
+                <th className="py-3.5 px-4 text-center">Course Type</th>
+                <th className="py-3.5 px-4 text-center">Author / Instructor</th>
                 <th className="py-3.5 px-4 text-center">Modules & Lessons</th>
                 <th className="py-3.5 px-4 text-center">Passing Standard</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]/70">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-[#64748B]">
+                  <td colSpan="7" className="py-8 text-center text-[#64748B]">
                     Loading course catalog...
                   </td>
                 </tr>
               ) : courses.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="py-8 text-center text-[#64748B]">
+                  <td colSpan="7" className="py-8 text-center text-[#64748B]">
                     No training courses found matching your filter criteria.
                   </td>
                 </tr>
               ) : (
                 paginatedCourses.map((course) => (
                   <tr key={course.id} className="hover:bg-[#EFF6FF]/60 transition-colors">
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 text-left">
                       <div className="font-bold text-sm text-[#172B4D]">{course.title}</div>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-[#2C51A2]">
                           {course.category}
                         </span>
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                          course.course_type === 'certified' || !course.course_type
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-700 border border-slate-300'
-                        }`}>
-                          {course.course_type === 'non_certified' ? 'Non Certified' : 'Certified'}
-                        </span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 text-center">
+                      <span className={`clay-pill text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full inline-flex items-center ${
+                        course.course_type === 'certified' || !course.course_type
+                          ? 'bg-blue-50 text-[#1E3B78] border border-blue-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-300'
+                      }`}>
+                        {course.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-left">
                       <div className="font-semibold text-[#172B4D]">{course.instructor_name}</div>
                       <div className="text-[10px] text-[#64748B]">{course.instructor_department}</div>
                     </td>
@@ -419,53 +432,45 @@ const AllCourses = () => {
                         {course.status}
                       </Badge>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant={course.status === 'published' ? 'secondary' : 'primary'}
-                          size="sm"
-                          onClick={() => handleTogglePublish(course)}
-                        >
-                          {course.status === 'published' ? 'Unpublish' : 'Publish'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          icon={Users}
-                          disabled={course.status !== 'published'}
-                          onClick={() => {
-                            if (course.status !== 'published') {
-                              showAlert({
-                                title: 'Publication Required',
-                                message: 'This course is in draft. Please publish the course before assigning it to learners.',
-                                type: 'warning',
-                              });
-                              return;
-                            }
-                            navigate(`/instructor/assignments?courseId=${course.id}&openAssign=1`);
-                          }}
-                          className={course.status !== 'published' ? 'opacity-50 cursor-not-allowed' : ''}
-                          title={course.status !== 'published' ? 'Publish course first to unlock trainee assignment' : 'Assign trainees'}
-                        >
-                          Assign
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          icon={Edit3}
-                          onClick={() => navigate(`/instructor/course-builder?courseId=${course.id}`)}
-                          title="Edit Curriculum"
-                        >
-                          Curriculum
-                        </Button>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          icon={Trash2}
-                          onClick={() => handleDeleteCourse(course.id, course.title)}
-                          title="Delete Course"
-                        />
-                      </div>
+                    <td className="py-3.5 px-4 text-center">
+                      <ActionMenu
+                        triggerTitle={`Actions for ${course.title}`}
+                        items={[
+                          {
+                            label: course.status === 'published' ? 'Unpublish Course' : 'Publish Course',
+                            icon: course.status === 'published' ? Clock : CheckCircle,
+                            onClick: () => handleTogglePublish(course),
+                          },
+                          {
+                            label: 'Assign Trainees',
+                            icon: Users,
+                            disabled: course.status !== 'published',
+                            title: course.status !== 'published' ? 'Publish course first to unlock trainee assignment' : 'Assign trainees',
+                            onClick: () => {
+                              if (course.status !== 'published') {
+                                showAlert({
+                                  title: 'Publication Required',
+                                  message: 'This course is in draft. Please publish the course before assigning it to learners.',
+                                  type: 'warning',
+                                });
+                                return;
+                              }
+                              navigate(`/instructor/assignments?courseId=${course.id}&openAssign=1`);
+                            },
+                          },
+                          {
+                            label: 'Edit Curriculum',
+                            icon: Edit3,
+                            onClick: () => navigate(`/instructor/course-builder?courseId=${course.id}`),
+                          },
+                          {
+                            label: 'Delete Course',
+                            icon: Trash2,
+                            variant: 'danger',
+                            onClick: () => handleDeleteCourse(course.id, course.title),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 ))
