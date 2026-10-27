@@ -23,6 +23,9 @@ class API_Controller extends MY_Controller {
      */
     protected function authenticate_request() {
         $token = $this->get_bearer_token();
+        if (!$token) {
+            $token = $this->input->get('token', TRUE);
+        }
         if ($token) {
             $payload = $this->jwt->decode($token);
             if ($payload) {

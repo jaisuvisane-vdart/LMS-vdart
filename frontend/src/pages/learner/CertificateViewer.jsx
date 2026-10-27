@@ -33,6 +33,53 @@ import {
 } from 'lucide-react';
 import vdartLogo from '../../assets/VDart_Logobg.png';
 
+export const CERTIFICATE_TEMPLATES = {
+  classic: {
+    outerBorder: 'border-4 border-[#2C51A2]',
+    innerBorder: 'border border-[#CBD5E1]/80 bg-[#FAFBFD]/90',
+    primaryColor: 'text-[#1E3B78]',
+    accentColor: 'text-[#2C51A2]',
+    badgeBg: 'bg-[#E2E9F4] text-[#1E3B78] border border-white/60',
+    dividerColor: 'border-[#2C51A2]',
+    title: 'Certificate of Achievement',
+    subtitle: 'Formal Milestone & Competency Certification',
+    badgeText: '[Officially Validated Record]',
+  },
+  modern: {
+    outerBorder: 'border-4 border-[#4338CA]',
+    innerBorder: 'border border-[#C7D2FE]/80 bg-[#F8FAFC]/95',
+    primaryColor: 'text-[#312E81]',
+    accentColor: 'text-[#4338CA]',
+    badgeBg: 'bg-[#EEF2FF] text-[#4338CA] border border-[#C7D2FE]',
+    dividerColor: 'border-[#4338CA]',
+    title: 'Certificate of Competency',
+    subtitle: 'Verified Technical & Professional Specialization',
+    badgeText: '[Digital Competency Credential]',
+  },
+  gold: {
+    outerBorder: 'border-4 border-[#D97706]',
+    innerBorder: 'border-2 border-[#FDE68A]/90 bg-gradient-to-b from-[#FFFDF7] to-[#FFFBEB]',
+    primaryColor: 'text-[#92400E]',
+    accentColor: 'text-[#B45309]',
+    badgeBg: 'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]',
+    dividerColor: 'border-[#D97706]',
+    title: 'Executive Certificate of Distinction',
+    subtitle: 'Executive Honors & Master Milestone Achievement',
+    badgeText: '[Distinguished Honor Record]',
+  },
+  crest: {
+    outerBorder: 'border-4 border-[#047857]',
+    innerBorder: 'border border-[#A7F3D0]/80 bg-[#F0FDF4]/90',
+    primaryColor: 'text-[#065F46]',
+    accentColor: 'text-[#047857]',
+    badgeBg: 'bg-[#ECFDF5] text-[#065F46] border border-[#A7F3D0]',
+    dividerColor: 'border-[#047857]',
+    title: 'Academic Certificate of Excellence',
+    subtitle: 'Highest Academic & Technical Governance Benchmark',
+    badgeText: '[Academic Excellence Record]',
+  },
+};
+
 const CertificateViewer = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -57,6 +104,8 @@ const CertificateViewer = () => {
   const publicVerifyUrl = certificate
     ? `${window.location.origin}/verify-certificate/${certificate.certificate_code}`
     : '';
+
+  const tmpl = CERTIFICATE_TEMPLATES[certificate?.certificate_template || 'classic'] || CERTIFICATE_TEMPLATES.classic;
 
   useEffect(() => {
     const fetchCert = async () => {
@@ -276,16 +325,16 @@ const CertificateViewer = () => {
       {/* Official Certificate Canvas */}
       <div
         id="printable-certificate"
-        className="clay-card p-8 sm:p-14 rounded-2xl border-4 border-[#2C51A2] shadow-2xl relative overflow-hidden select-none print:border-none print:shadow-none print:p-0 print:rounded-none"
+        className={`clay-card p-8 sm:p-14 rounded-2xl ${tmpl.outerBorder} shadow-2xl relative overflow-hidden select-none print:border-none print:shadow-none print:p-0 print:rounded-none`}
       >
         {/* Inner Border Frame */}
-        <div className="border border-[#CBD5E1]/80 rounded-2xl p-6 sm:p-10 text-center space-y-6 relative z-10 bg-[#FAFBFD]/80 print:rounded-none">
+        <div className={`rounded-2xl p-6 sm:p-10 text-center space-y-6 relative z-10 ${tmpl.innerBorder} print:rounded-none`}>
           {/* Header Seal */}
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 bg-white border border-[#2C51A2]/30 rounded-2xl flex items-center justify-center p-2.5 shadow-md">
+            <div className={`w-16 h-16 bg-white border ${tmpl.dividerColor}/30 rounded-2xl flex items-center justify-center p-2.5 shadow-md`}>
               <img src={vdartLogo} alt="VDart" className="w-full h-full object-contain" />
             </div>
-            <div className="text-[11px] font-extrabold uppercase tracking-widest text-[#1E3B78] mt-3">
+            <div className={`text-[11px] font-extrabold uppercase tracking-widest ${tmpl.primaryColor} mt-3`}>
               VDart-Learning
             </div>
             <div className="text-[9px] uppercase tracking-widest text-[#64748B] font-semibold">
@@ -295,11 +344,11 @@ const CertificateViewer = () => {
 
           {/* Certificate Main Title */}
           <div className="space-y-1">
-            <h1 className="text-2xl sm:text-4xl font-extrabold uppercase tracking-wider text-[#1E3B78]">
-              Certificate of Achievement
+            <h1 className={`text-2xl sm:text-4xl font-extrabold uppercase tracking-wider ${tmpl.primaryColor}`}>
+              {tmpl.title}
             </h1>
-            <p className="text-xs uppercase tracking-widest text-[#2C51A2] font-bold">
-              Formal Milestone & Competency Certification
+            <p className={`text-xs uppercase tracking-widest ${tmpl.accentColor} font-bold`}>
+              {tmpl.subtitle}
             </p>
           </div>
 
@@ -308,7 +357,7 @@ const CertificateViewer = () => {
             <p className="text-xs text-[#64748B] uppercase tracking-wider font-medium">
               This official document confirms and certifies that
             </p>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#172B4D] tracking-wider uppercase mt-3 mb-2 pb-3.5 border-b-2 border-[#2C51A2] inline-block px-12 leading-normal">
+            <div className={`text-2xl sm:text-3xl font-extrabold text-[#172B4D] tracking-wider uppercase mt-3 mb-2 pb-3.5 border-b-2 ${tmpl.dividerColor} inline-block px-12 leading-normal`}>
               {certificate.learner_name}
             </div>
             <p className="text-xs text-[#64748B] font-medium mt-1">
@@ -321,14 +370,14 @@ const CertificateViewer = () => {
             <p className="text-xs text-[#64748B] uppercase tracking-wider font-medium">
               Has completed the prescribed curriculum and verified competency standards in
             </p>
-            <h2 className="text-lg sm:text-xl font-bold uppercase tracking-wide text-[#1E3B78]">
+            <h2 className={`text-lg sm:text-xl font-bold uppercase tracking-wide ${tmpl.primaryColor}`}>
               {certificate.course_title}
             </h2>
             <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-[#172B4D] pt-1">
-              <span className="clay-pill bg-[#E2E9F4] px-3.5 py-1 rounded-full border border-white/60 text-[#1E3B78]">
+              <span className={`clay-pill px-3.5 py-1 rounded-full ${tmpl.badgeBg}`}>
                 Category: {certificate.course_category || 'Technical Curriculum'}
               </span>
-              <span className="clay-pill bg-[#E2E9F4] px-3.5 py-1 rounded-full border border-[#BFDBFE]/70 text-[#1E3B78]">
+              <span className={`clay-pill px-3.5 py-1 rounded-full ${tmpl.badgeBg}`}>
                 Evaluation Grade: {parseFloat(certificate.final_score).toFixed(1)}%
               </span>
             </div>
@@ -337,20 +386,20 @@ const CertificateViewer = () => {
           {/* Signatures & Issue Metadata */}
           <div className="pt-8 sm:pt-12 grid grid-cols-2 gap-8 max-w-2xl mx-auto items-end">
             <div className="text-center space-y-1.5">
-              <div className="font-serif italic text-base sm:text-lg text-[#172B4D] border-b border-[#2C51A2] pb-2.5 leading-relaxed">
+              <div className={`font-serif italic text-base sm:text-lg text-[#172B4D] border-b ${tmpl.dividerColor} pb-2.5 leading-relaxed`}>
                 {certificate.instructor_name || 'Sarah Jenkins'}
               </div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[#1E3B78]">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${tmpl.primaryColor}`}>
                 {certificate.instructor_designation || 'Lead Technical Instructor'}
               </div>
               <div className="text-[9px] text-[#64748B] uppercase font-semibold">Curriculum Author</div>
             </div>
 
             <div className="text-center space-y-1.5">
-              <div className="font-serif italic text-base sm:text-lg text-[#172B4D] border-b border-[#2C51A2] pb-2.5 leading-relaxed">
+              <div className={`font-serif italic text-base sm:text-lg text-[#172B4D] border-b ${tmpl.dividerColor} pb-2.5 leading-relaxed`}>
                 Executive Training Council
               </div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-[#1E3B78]">
+              <div className={`text-[10px] font-bold uppercase tracking-wider ${tmpl.primaryColor}`}>
                 LMS System Administrator
               </div>
               <div className="text-[9px] text-[#64748B] uppercase font-semibold">Authorized Governing Body</div>
@@ -365,12 +414,12 @@ const CertificateViewer = () => {
             </div>
             <div className="font-mono flex items-center gap-1.5">
               <span>Verification Code: </span>
-              <strong className="text-[#1E3B78] bg-[#F1F5F9] px-2.5 py-0.5 rounded-lg border border-[#CBD5E1]">
+              <strong className={`${tmpl.primaryColor} bg-[#F1F5F9] px-2.5 py-0.5 rounded-lg border border-[#CBD5E1]`}>
                 {certificate.certificate_code}
               </strong>
             </div>
             <div>
-              <span className="text-[#2C51A2] font-bold uppercase">[Officially Validated Record]</span>
+              <span className={`${tmpl.accentColor} font-bold uppercase`}>{tmpl.badgeText}</span>
             </div>
           </div>
         </div>

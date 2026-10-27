@@ -30,18 +30,12 @@ const WelcomeBanner = ({
   const roleDefaults = {
     admin: {
       portalLabel: 'System Administration & Governance',
-      defaultSubtitle:
-        'Here is what is happening across your enterprise learning environment today. You have full administrative oversight of employee directory, course catalog, compliance reports, and audit trails.',
     },
     instructor: {
       portalLabel: 'Curriculum Authoring & Grading Studio',
-      defaultSubtitle:
-        'Manage your curriculum syllabi, formulate interactive lesson modules, configure assessments, and review trainee performance metrics.',
     },
     learner: {
       portalLabel: 'Employee Professional Development',
-      defaultSubtitle:
-        'Continue your professional development journey. Review assigned corporate curriculum, complete mandatory assessment modules, and earn certified competency badges.',
     },
   };
 
@@ -64,9 +58,11 @@ const WelcomeBanner = ({
           {greeting}, <span className="text-[#2C51A2]">{fullName}</span>!
         </h1>
 
-        <p className="text-xs text-[#64748B] mt-1 max-w-2xl leading-relaxed">
-          {subtitle || currentDefaults.defaultSubtitle}
-        </p>
+        {subtitle && (
+          <p className="text-xs text-[#64748B] mt-1 max-w-2xl leading-relaxed">
+            {subtitle}
+          </p>
+        )}
       </div>
 
       {/* Date Pill & Quick Action Buttons */}

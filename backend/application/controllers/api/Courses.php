@@ -110,11 +110,66 @@ class Courses extends API_Controller {
             'thumbnail_url'              => trim($input['thumbnail_url'] ?? ''),
             'status'                     => 'draft',
             'estimated_duration_minutes' => (int)($input['estimated_duration_minutes'] ?? 60),
+            'duration_days'              => max(1, (int)($input['duration_days'] ?? 30)),
+            'certificate_template'       => in_array($input['certificate_template'] ?? '', ['classic', 'modern', 'gold', 'crest']) ? $input['certificate_template'] : 'classic',
             'passing_percentage'         => (float)($input['passing_percentage'] ?? 70.00),
         ];
 
         $course_id = $this->courses->create($insert_data);
-        $new_course = $this->courses->get_by_id($course_id);
+
+        // Process embedded lessons if provided during unified creation
+        if (!empty($input['lessons']) && is_array($input['lessons'])) {
+            $allowed_types = ['text', 'video', 'document', 'quiz', 'presentation', 'word', 'spreadsheet'];
+            foreach ($input['lessons'] as $idx => $les) {
+                $l_title = trim($les['title'] ?? '');
+                if (empty($l_title)) continue;
+                $lesson_type = strtolower(trim($les['lesson_type'] ?? 'text'));
+                $lesson_type = in_array($lesson_type, $allowed_types, true) ? $lesson_type : 'text';
+                $lesson_status = in_array($les['status'] ?? '', ['active', 'inactive'], true) ? $les['status'] : 'active';
+                $this->lessons->create([
+                    'course_id'        => $course_id,
+                    'title'            => $l_title,
+                    'content'          => $les['content'] ?? '',
+                    'lesson_type'      => $lesson_type,
+                    'status'           => $lesson_status,
+                    'duration_minutes' => (int)($les['duration_minutes'] ?? 15),
+                    'is_mandatory'     => isset($les['is_mandatory']) ? (int)$les['is_mandatory'] : 1,
+                    'order_index'      => isset($les['order_index']) ? (int)$les['order_index'] : ($idx + 1),
+                ]);
+            }
+        }
+
+        // Process embedded certification quiz/assessment if certified course
+        if ($course_type === 'certified' && !empty($input['assessment']) && is_array($input['assessment'])) {
+            $this->load->model('Assessment_model', 'assessments');
+            $ass_data = $input['assessment'];
+            $ass_id = $this->assessments->create_assessment([
+                'course_id'             => $course_id,
+                'title'                 => !empty($ass_data['title']) ? trim($ass_data['title']) : $title . ' - Certification Examination',
+                'description'           => $ass_data['description'] ?? 'Official certification assessment validating competency for ' . $title,
+                'passing_percentage'    => isset($ass_data['passing_percentage']) ? (float)$ass_data['passing_percentage'] : (float)($input['passing_percentage'] ?? 70.00),
+                'time_limit_minutes'    => isset($ass_data['time_limit_minutes']) ? (int)$ass_data['time_limit_minutes'] : 30,
+                'max_attempts'          => isset($ass_data['max_attempts']) ? (int)$ass_data['max_attempts'] : 1,
+                'is_active'             => 1,
+                'show_score_to_learner' => isset($ass_data['show_score_to_learner']) ? (int)$ass_data['show_score_to_learner'] : 1,
+            ]);
+
+            if (!empty($ass_data['questions']) && is_array($ass_data['questions'])) {
+                foreach ($ass_data['questions'] as $q_idx => $q) {
+                    if (empty(trim($q['question_text'] ?? ''))) continue;
+                    $this->assessments->add_question($ass_id, [
+                        'question_text' => trim($q['question_text']),
+                        'question_type' => in_array($q['question_type'] ?? '', ['multiple_choice', 'true_false']) ? $q['question_type'] : 'multiple_choice',
+                        'marks'         => max(1, (int)($q['marks'] ?? 1)),
+                        'order_index'   => $q_idx + 1,
+                        'explanation'   => $q['explanation'] ?? null,
+                        'options'       => $q['options'] ?? [],
+                    ]);
+                }
+            }
+        }
+
+        $new_course = $this->courses->get_full_curriculum($course_id);
 
         return $this->json_response($new_course, 'Course created successfully as draft.', 201);
     }
@@ -154,6 +209,10 @@ class Courses extends API_Controller {
         }
         if (isset($input['description'])) $update_data['description'] = trim($input['description']);
         if (isset($input['estimated_duration_minutes'])) $update_data['estimated_duration_minutes'] = (int)$input['estimated_duration_minutes'];
+        if (isset($input['duration_days'])) $update_data['duration_days'] = max(1, (int)$input['duration_days']);
+        if (isset($input['certificate_template']) && in_array($input['certificate_template'], ['classic', 'modern', 'gold', 'crest'], true)) {
+            $update_data['certificate_template'] = $input['certificate_template'];
+        }
         if (isset($input['passing_percentage'])) $update_data['passing_percentage'] = (float)$input['passing_percentage'];
 
         if (isset($input['status'])) {
@@ -175,7 +234,99 @@ class Courses extends API_Controller {
         if (!empty($update_data)) {
             $this->courses->update((int)$id, $update_data);
         }
-        $updated_course = $this->courses->get_by_id((int)$id);
+
+        $course_id = (int)$id;
+
+        // Process embedded lessons synchronization if provided
+        if (isset($input['lessons']) && is_array($input['lessons'])) {
+            $allowed_types = ['text', 'video', 'document', 'quiz', 'presentation', 'word', 'spreadsheet'];
+            $existing_lessons = $this->db->get_where('lessons', ['course_id' => $course_id])->result_array();
+            $existing_lesson_ids = array_column($existing_lessons, 'id');
+            $updated_lesson_ids = [];
+
+            foreach ($input['lessons'] as $idx => $les) {
+                $l_title = trim($les['title'] ?? '');
+                if (empty($l_title)) continue;
+
+                $lesson_type = strtolower(trim($les['lesson_type'] ?? 'text'));
+                $lesson_type = in_array($lesson_type, $allowed_types, true) ? $lesson_type : 'text';
+                $lesson_status = in_array($les['status'] ?? '', ['active', 'inactive'], true) ? $les['status'] : 'active';
+                $les_id = isset($les['id']) && is_numeric($les['id']) && in_array((int)$les['id'], $existing_lesson_ids) ? (int)$les['id'] : null;
+
+                $les_data = [
+                    'course_id'        => $course_id,
+                    'title'            => $l_title,
+                    'content'          => $les['content'] ?? '',
+                    'lesson_type'      => $lesson_type,
+                    'status'           => $lesson_status,
+                    'duration_minutes' => (int)($les['duration_minutes'] ?? 15),
+                    'is_mandatory'     => isset($les['is_mandatory']) ? (int)$les['is_mandatory'] : 1,
+                    'order_index'      => isset($les['order_index']) ? (int)$les['order_index'] : ($idx + 1),
+                ];
+
+                if ($les_id) {
+                    $this->lessons->update($les_id, $les_data);
+                    $updated_lesson_ids[] = $les_id;
+                } else {
+                    $new_id = $this->lessons->create($les_data);
+                    $updated_lesson_ids[] = $new_id;
+                }
+            }
+
+            // Remove lessons deleted in UI
+            foreach ($existing_lesson_ids as $ex_id) {
+                if (!in_array($ex_id, $updated_lesson_ids)) {
+                    $this->lessons->delete($ex_id);
+                }
+            }
+        }
+
+        // Process embedded certification assessment if certified course
+        $effective_type = $update_data['course_type'] ?? $course['course_type'];
+        if ($effective_type === 'certified' && isset($input['assessment']) && is_array($input['assessment'])) {
+            $this->load->model('Assessment_model', 'assessments');
+            $ass_data = $input['assessment'];
+            $existing_ass = $this->db->get_where('assessments', ['course_id' => $course_id, 'is_active' => 1])->row_array();
+
+            $ass_payload = [
+                'course_id'             => $course_id,
+                'title'                 => !empty($ass_data['title']) ? trim($ass_data['title']) : ($update_data['title'] ?? $course['title']) . ' - Certification Examination',
+                'description'           => $ass_data['description'] ?? 'Official certification assessment validating competency for ' . ($update_data['title'] ?? $course['title']),
+                'passing_percentage'    => isset($ass_data['passing_percentage']) ? (float)$ass_data['passing_percentage'] : (float)($update_data['passing_percentage'] ?? $course['passing_percentage'] ?? 70.00),
+                'time_limit_minutes'    => isset($ass_data['time_limit_minutes']) ? (int)$ass_data['time_limit_minutes'] : 30,
+                'max_attempts'          => isset($ass_data['max_attempts']) ? (int)$ass_data['max_attempts'] : 1,
+                'is_active'             => 1,
+                'show_score_to_learner' => isset($ass_data['show_score_to_learner']) ? (int)$ass_data['show_score_to_learner'] : 1,
+            ];
+
+            if ($existing_ass) {
+                $ass_id = (int)$existing_ass['id'];
+                $this->assessments->update_assessment($ass_id, $ass_payload);
+            } else {
+                $ass_id = $this->assessments->create_assessment($ass_payload);
+            }
+
+            // Sync questions and options
+            if (isset($ass_data['questions']) && is_array($ass_data['questions'])) {
+                $this->db->where('assessment_id', $ass_id)->delete('assessment_questions');
+
+                foreach ($ass_data['questions'] as $q_idx => $q) {
+                    if (empty(trim($q['question_text'] ?? ''))) continue;
+                    $this->assessments->add_question($ass_id, [
+                        'question_text' => trim($q['question_text']),
+                        'question_type' => in_array($q['question_type'] ?? '', ['multiple_choice', 'true_false']) ? $q['question_type'] : 'multiple_choice',
+                        'marks'         => max(1, (int)($q['marks'] ?? 1)),
+                        'order_index'   => $q_idx + 1,
+                        'explanation'   => $q['explanation'] ?? null,
+                        'options'       => $q['options'] ?? [],
+                    ]);
+                }
+            }
+        } elseif ($effective_type === 'non_certified') {
+            $this->db->where('course_id', $course_id)->update('assessments', ['is_active' => 0]);
+        }
+
+        $updated_course = $this->courses->get_full_curriculum((int)$id);
 
         return $this->json_response($updated_course, 'Course updated successfully.');
     }

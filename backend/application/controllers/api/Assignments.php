@@ -192,8 +192,7 @@ class Assignments extends API_Controller {
         // 2. Mark all lessons in this course as completed
         $this->db->select('l.id');
         $this->db->from('lessons l');
-        $this->db->join('course_modules cm', 'cm.id = l.module_id');
-        $this->db->where('cm.course_id', $course_id);
+        $this->db->where('l.course_id', $course_id);
         $lessons = $this->db->get()->result_array();
 
         foreach ($lessons as $les) {

@@ -33,7 +33,7 @@ const AdminDashboard = () => {
   const kpis = [
     { label: 'Total Users', value: metrics?.total_users ?? 3, sub: 'Registered Accounts', icon: Users, accent: 'border-t-4 border-[#2C51A2]' },
     { label: 'Instructors', value: metrics?.total_instructors ?? 1, sub: 'Course Authors', icon: GraduationCap, accent: 'border-t-4 border-[#1E3B78]' },
-    { label: 'Learners', value: metrics?.total_learners ?? 1, sub: 'Trainee Employees', icon: Users, accent: 'border-t-4 border-[#2C51A2]' },
+    { label: 'Learners', value: metrics?.total_learners ?? 1, sub: 'Enrolled Learners', icon: Users, accent: 'border-t-4 border-[#2C51A2]' },
     { label: 'Courses', value: metrics?.total_courses ?? 0, sub: 'Active Curriculum', icon: BookOpen, accent: 'border-t-4 border-[#2C51A2]' },
     { label: 'In Progress', value: metrics?.active_assignments ?? 0, sub: 'Active Training', icon: Clock, accent: 'border-t-4 border-[#D97706]' },
     { label: 'Completed', value: metrics?.completed_assignments ?? 0, sub: 'Certifications', icon: CheckCircle, accent: 'border-t-4 border-[#2C51A2]' },
@@ -50,7 +50,7 @@ const AdminDashboard = () => {
               Export Reports
             </Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/admin/users')}>
-              New Employee
+              Create User
             </Button>
           </>
         }
@@ -154,7 +154,7 @@ const AdminDashboard = () => {
                 onClick={() => navigate('/admin/users')}
                 className="w-full text-left p-3.5 clay-btn-secondary rounded-xl text-xs font-bold text-[#2C51A2] flex items-center justify-between"
               >
-                <span>Provision Employee Accounts</span>
+                <span>Create User Accounts</span>
                 <ArrowUpRight className="w-4 h-4 text-[#2C51A2]" />
               </button>
               <button

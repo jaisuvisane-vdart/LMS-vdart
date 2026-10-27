@@ -132,6 +132,147 @@ class Materials extends API_Controller {
     }
 
     /**
+     * GET /api/materials/{id}/stream
+     * Streams the binary material file with Content-Disposition: inline
+     */
+    public function stream($id = null) {
+        $this->serve_material_file($id, false);
+    }
+
+    /**
+     * GET /api/materials/{id}/download
+     * Forces downloading of material file with Content-Disposition: attachment
+     */
+    public function download($id = null) {
+        $this->serve_material_file($id, true);
+    }
+
+    /**
+     * Internal file server supporting streaming, ranges, and accurate MIME types
+     */
+    private function serve_material_file($id, $force_download = false) {
+        if (!$id) {
+            show_error('Material ID is required.', 400);
+            return;
+        }
+
+        $material = $this->materials->get_by_id((int)$id);
+        if (!$material) {
+            show_error('Material not found.', 404);
+            return;
+        }
+
+        // If it's an external link, redirect directly
+        if (!empty($material['external_url'])) {
+            redirect($material['external_url']);
+            return;
+        }
+
+        // Resolve absolute filesystem path
+        $file_path = rtrim(FCPATH, '/\\') . DIRECTORY_SEPARATOR . ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $material['file_path']), DIRECTORY_SEPARATOR);
+        if (!file_exists($file_path)) {
+            $alt_path = 'C:/xampp/htdocs/LMS/backend/' . ltrim($material['file_path'], '/\\');
+            if (file_exists($alt_path)) {
+                $file_path = $alt_path;
+            }
+        }
+
+        if (!file_exists($file_path) || is_dir($file_path)) {
+            show_error('Material file could not be found on storage.', 404);
+            return;
+        }
+
+        $filename = !empty($material['file_name']) ? $material['file_name'] : basename($file_path);
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        // Map MIME types
+        $mime_types = [
+            'pdf'  => 'application/pdf',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'doc'  => 'application/msword',
+            'pptx' => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'ppt'  => 'application/vnd.ms-powerpoint',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'xls'  => 'application/vnd.ms-excel',
+            'csv'  => 'text/csv; charset=UTF-8',
+            'mp4'  => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov'  => 'video/quicktime',
+            'avi'  => 'video/x-msvideo',
+            'mkv'  => 'video/x-matroska',
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'svg'  => 'image/svg+xml',
+            'webp' => 'image/webp',
+            'txt'  => 'text/plain; charset=UTF-8',
+            'md'   => 'text/plain; charset=UTF-8',
+            'json' => 'application/json',
+        ];
+
+        $content_type = isset($mime_types[$ext]) ? $mime_types[$ext] : 'application/octet-stream';
+        $file_size = filesize($file_path);
+        $disposition = ($force_download || $this->input->get('download') == '1') ? 'attachment' : 'inline';
+
+        // Clear output buffer
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        // Support HTTP Range requests (crucial for video scrubbing and multi-page PDF seek)
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            $range = $_SERVER['HTTP_RANGE'];
+            list($param, $range_value) = explode('=', $range, 2);
+            if (strtolower(trim($param)) === 'bytes') {
+                $range_parts = explode('-', $range_value);
+                $range_start = intval($range_parts[0]);
+                $range_end = (!empty($range_parts[1]) && intval($range_parts[1]) < $file_size) ? intval($range_parts[1]) : ($file_size - 1);
+
+                if ($range_start > $range_end || $range_start >= $file_size) {
+                    header('HTTP/1.1 416 Requested Range Not Satisfiable');
+                    header("Content-Range: bytes */{$file_size}");
+                    exit;
+                }
+
+                $length = $range_end - $range_start + 1;
+                header('HTTP/1.1 206 Partial Content');
+                header("Content-Range: bytes {$range_start}-{$range_end}/{$file_size}");
+                header("Content-Length: {$length}");
+                header("Content-Type: {$content_type}");
+                header("Content-Disposition: {$disposition}; filename=\"" . addslashes($filename) . "\"");
+                header('Accept-Ranges: bytes');
+                header('Cache-Control: public, max-age=86400');
+
+                $fp = fopen($file_path, 'rb');
+                fseek($fp, $range_start);
+                $buffer_size = 1024 * 64;
+                while (!feof($fp) && ($pos = ftell($fp)) <= $range_end) {
+                    if ($pos + $buffer_size > $range_end) {
+                        $buffer_size = $range_end - $pos + 1;
+                    }
+                    echo fread($fp, $buffer_size);
+                    flush();
+                }
+                fclose($fp);
+                exit;
+            }
+        }
+
+        // Full file stream
+        header('HTTP/1.1 200 OK');
+        header("Content-Type: {$content_type}");
+        header("Content-Length: {$file_size}");
+        header("Content-Disposition: {$disposition}; filename=\"" . addslashes($filename) . "\"");
+        header('Accept-Ranges: bytes');
+        header('Cache-Control: public, max-age=86400');
+        header('Pragma: public');
+
+        readfile($file_path);
+        exit;
+    }
+
+    /**
      * GET /api/materials/{id}/preview
      * Returns structured preview data (slides for PPTX, stream paths for PDF/media, etc.)
      */
@@ -166,6 +307,9 @@ class Materials extends API_Controller {
             ], 'External resource retrieved.');
         }
 
+        $stream_url   = '/api/materials/' . $material['id'] . '/stream';
+        $download_url = '/api/materials/' . $material['id'] . '/download';
+
         if (in_array($ext, ['pptx', 'ppt'])) {
             $slides = $this->parse_pptx_slides($file_path);
             return $this->json_response([
@@ -174,6 +318,8 @@ class Materials extends API_Controller {
                 'file_name'    => $material['file_name'],
                 'preview_type' => 'pptx',
                 'file_path'    => $material['file_path'],
+                'file_url'     => $stream_url,
+                'download_url' => $download_url,
                 'total_slides' => count($slides),
                 'slides'       => $slides,
             ], 'Presentation slides parsed successfully.');
@@ -185,7 +331,8 @@ class Materials extends API_Controller {
                 'lesson_id'    => (int)$material['lesson_id'],
                 'file_name'    => $material['file_name'],
                 'preview_type' => 'pdf',
-                'file_url'     => '/LMS/backend/' . $material['file_path'],
+                'file_url'     => $stream_url,
+                'download_url' => $download_url,
             ], 'PDF document preview ready.');
         }
 
@@ -195,7 +342,8 @@ class Materials extends API_Controller {
                 'lesson_id'    => (int)$material['lesson_id'],
                 'file_name'    => $material['file_name'],
                 'preview_type' => 'image',
-                'file_url'     => '/LMS/backend/' . $material['file_path'],
+                'file_url'     => $stream_url,
+                'download_url' => $download_url,
             ], 'Image preview ready.');
         }
 
@@ -205,7 +353,8 @@ class Materials extends API_Controller {
                 'lesson_id'    => (int)$material['lesson_id'],
                 'file_name'    => $material['file_name'],
                 'preview_type' => 'video',
-                'file_url'     => '/LMS/backend/' . $material['file_path'],
+                'file_url'     => $stream_url,
+                'download_url' => $download_url,
             ], 'Video preview ready.');
         }
 
@@ -219,7 +368,8 @@ class Materials extends API_Controller {
                 'title'          => $docx_data['title'],
                 'total_elements' => $docx_data['total_elements'],
                 'elements'       => $docx_data['elements'],
-                'file_url'       => '/LMS/backend/' . $material['file_path'],
+                'file_url'       => $stream_url,
+                'download_url'   => $download_url,
             ], 'Word document parsed successfully.');
         }
 
@@ -232,8 +382,22 @@ class Materials extends API_Controller {
                 'preview_type' => 'spreadsheet',
                 'total_sheets' => $sheet_data['total_sheets'],
                 'sheets'       => $sheet_data['sheets'],
-                'file_url'     => '/LMS/backend/' . $material['file_path'],
+                'file_url'     => $stream_url,
+                'download_url' => $download_url,
             ], 'Spreadsheet parsed successfully.');
+        }
+
+        if (in_array($ext, ['txt', 'md', 'json', 'log', 'sql'])) {
+            $raw_text = file_exists($file_path) ? @file_get_contents($file_path) : '';
+            return $this->json_response([
+                'id'           => (int)$material['id'],
+                'lesson_id'    => (int)$material['lesson_id'],
+                'file_name'    => $material['file_name'],
+                'preview_type' => 'text',
+                'file_url'     => $stream_url,
+                'download_url' => $download_url,
+                'raw_content'  => $raw_text,
+            ], 'Text document preview ready.');
         }
 
         return $this->json_response([
@@ -241,7 +405,8 @@ class Materials extends API_Controller {
             'lesson_id'    => (int)$material['lesson_id'],
             'file_name'    => $material['file_name'],
             'preview_type' => 'download_only',
-            'file_url'     => '/LMS/backend/' . $material['file_path'],
+            'file_url'     => $stream_url,
+            'download_url' => $download_url,
         ], 'Material ready for download.');
     }
 

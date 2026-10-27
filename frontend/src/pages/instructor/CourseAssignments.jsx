@@ -489,7 +489,7 @@ const CourseAssignments = () => {
             Trainee Course Assignments & Tracking
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5 max-w-2xl leading-relaxed">
-            Enroll trainee employees into published programs, assign completion deadlines, and monitor real-time progress.
+            Enroll learners into published programs, assign completion deadlines, and monitor real-time progress.
           </p>
         </div>
         <div>
@@ -578,11 +578,11 @@ const CourseAssignments = () => {
                   boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)'
                 }}
               >
-                <th className="py-3.5 px-4 text-center">Trainee Employee</th>
+                <th className="py-3.5 px-4 text-center">Learner</th>
                 <th className="py-3.5 px-4 text-center">Department</th>
                 <th className="py-3.5 px-4 text-center">Assigned Course</th>
                 <th className="py-3.5 px-4 text-center">Assigned / Due</th>
-                <th className="py-3.5 px-4 text-center w-44">Module Progress</th>
+                <th className="py-3.5 px-4 text-center w-44">Lesson Progress</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>

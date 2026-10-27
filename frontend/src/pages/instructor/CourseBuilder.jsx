@@ -36,16 +36,10 @@ const CourseBuilder = () => {
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // View Mode: 'curriculum' | 'module_form' | 'lesson_form' | 'material_form'
+  // View Mode: 'curriculum' | 'lesson_form' | 'material_form'
   const [viewMode, setViewMode] = useState('curriculum');
 
-  // Module Form States
-  const [editingModule, setEditingModule] = useState(null);
-  const [moduleForm, setModuleForm] = useState({ title: '', description: '', order_index: 1 });
-  const [moduleSubmitting, setModuleSubmitting] = useState(false);
-
   // Lesson Form States
-  const [activeModuleIdForLesson, setActiveModuleIdForLesson] = useState(null);
   const [editingLesson, setEditingLesson] = useState(null);
   const [lessonForm, setLessonForm] = useState({
     title: '',
@@ -104,73 +98,8 @@ const CourseBuilder = () => {
     }
   }, [selectedCourseId]);
 
-  // MODULE HANDLERS
-  const handleOpenModuleModal = (module = null) => {
-    if (module) {
-      setEditingModule(module);
-      setModuleForm({
-        title: module.title,
-        description: module.description || '',
-        order_index: module.order_index || 1,
-      });
-    } else {
-      setEditingModule(null);
-      setModuleForm({
-        title: '',
-        description: '',
-        order_index: (course?.modules?.length || 0) + 1,
-      });
-    }
-    setViewMode('module_form');
-  };
-
-  const handleSaveModule = async (e) => {
-    e.preventDefault();
-    if (!selectedCourseId) return;
-    try {
-      setModuleSubmitting(true);
-      if (editingModule) {
-        await courseService.updateModule(editingModule.id, moduleForm);
-      } else {
-        await courseService.createModule(selectedCourseId, moduleForm);
-      }
-      setViewMode('curriculum');
-      fetchCurriculum(selectedCourseId);
-    } catch (err) {
-      showAlert({
-        title: 'Module Save Error',
-        message: err.response?.data?.message || err.message || 'Error saving module',
-        type: 'error',
-      });
-    } finally {
-      setModuleSubmitting(false);
-    }
-  };
-
-  const handleDeleteModule = async (moduleId, title) => {
-    const confirmed = await showConfirm({
-      title: 'Delete Module',
-      message: `Delete module "${title}" and all its lessons?`,
-      confirmText: 'Delete Module',
-      type: 'confirm',
-    });
-    if (!confirmed) return;
-
-    try {
-      await courseService.deleteModule(moduleId);
-      fetchCurriculum(selectedCourseId);
-    } catch (err) {
-      showAlert({
-        title: 'Delete Error',
-        message: err.message || 'Error deleting module',
-        type: 'error',
-      });
-    }
-  };
-
   // LESSON HANDLERS
-  const handleOpenLessonModal = (moduleId, lesson = null) => {
-    setActiveModuleIdForLesson(moduleId);
+  const handleOpenLessonModal = (lesson = null) => {
     if (lesson) {
       setEditingLesson(lesson);
       setLessonForm({
@@ -183,14 +112,13 @@ const CourseBuilder = () => {
       });
     } else {
       setEditingLesson(null);
-      const mod = course?.modules?.find((m) => m.id === moduleId);
       setLessonForm({
         title: '',
         content: '',
         lesson_type: 'text',
         duration_minutes: 15,
         is_mandatory: 1,
-        order_index: (mod?.lessons?.length || 0) + 1,
+        order_index: (course?.lessons?.length || 0) + 1,
       });
     }
     setViewMode('lesson_form');
@@ -198,13 +126,13 @@ const CourseBuilder = () => {
 
   const handleSaveLesson = async (e) => {
     e.preventDefault();
-    if (!activeModuleIdForLesson) return;
+    if (!selectedCourseId) return;
     try {
       setLessonSubmitting(true);
       if (editingLesson) {
         await courseService.updateLesson(editingLesson.id, lessonForm);
       } else {
-        await courseService.createLesson(activeModuleIdForLesson, lessonForm);
+        await courseService.createLesson(selectedCourseId, lessonForm);
       }
       setViewMode('curriculum');
       fetchCurriculum(selectedCourseId);
@@ -415,75 +343,6 @@ const CourseBuilder = () => {
         return <FileText className="w-4 h-4 text-[#2C51A2]" />;
     }
   };
-
-  if (viewMode === 'module_form') {
-    return (
-      <div className="space-y-6">
-        <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
-                Curriculum Studio
-              </span>
-              <span className="text-xs text-[#64748B]">Module Management</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#172B4D] uppercase tracking-wide mt-1.5">
-              {editingModule ? 'Edit Curriculum Module' : 'Add Curriculum Module'}
-            </h1>
-            <p className="text-xs text-[#64748B] mt-0.5 max-w-2xl leading-relaxed">
-              Group lessons into logical chapters or technical phases.
-            </p>
-          </div>
-          <div>
-            <Button variant="secondary" size="md" icon={ArrowLeft} onClick={() => setViewMode('curriculum')}>
-              Back to Curriculum
-            </Button>
-          </div>
-        </div>
-
-        <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleSaveModule} className="space-y-4 w-full">
-            <Input
-              label="Module Title"
-              required
-              value={moduleForm.title}
-              onChange={(e) => setModuleForm({ ...moduleForm, title: e.target.value })}
-              placeholder="e.g. Module 1: Enterprise MVC Architecture"
-            />
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#172B4D] mb-1.5">
-                Module Summary
-              </label>
-              <textarea
-                rows="3"
-                value={moduleForm.description}
-                onChange={(e) => setModuleForm({ ...moduleForm, description: e.target.value })}
-                className="w-full text-[#172B4D] text-sm p-3.5 rounded-xl focus:outline-none clay-input"
-                placeholder="Summary of skills and concepts covered in this module..."
-              />
-            </div>
-
-            <Input
-              label="Order Index Sequence"
-              type="number"
-              value={moduleForm.order_index}
-              onChange={(e) => setModuleForm({ ...moduleForm, order_index: e.target.value })}
-            />
-
-            <div className="pt-4 border-t border-[#E2E8F0] flex justify-end gap-2.5">
-              <Button variant="secondary" onClick={() => setViewMode('curriculum')}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" loading={moduleSubmitting}>
-                Save Module
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   if (viewMode === 'lesson_form') {
     return (
@@ -755,8 +614,8 @@ const CourseBuilder = () => {
                 >
                   {course.status === 'published' ? 'Revert to Draft' : 'Publish Course'}
                 </Button>
-                <Button variant="primary" size="md" icon={Plus} onClick={() => handleOpenModuleModal()}>
-                  Add Module
+                <Button variant="primary" size="md" icon={Plus} onClick={() => handleOpenLessonModal()}>
+                  Add Lesson
                 </Button>
               </div>
             </div>
@@ -772,8 +631,8 @@ const CourseBuilder = () => {
                 <span className="font-bold text-[#2C51A2] font-mono">{course.passing_percentage}% Required</span>
               </div>
               <div className="bg-white/80 p-3.5 rounded-xl border border-[#E2E8F0] clay-pill">
-                <span className="text-[#64748B] block font-semibold">Curriculum Modules:</span>
-                <span className="font-bold text-[#2C51A2] font-mono">{course.modules?.length || 0} Modules</span>
+                <span className="text-[#64748B] block font-semibold">Curriculum Lessons:</span>
+                <span className="font-bold text-[#2C51A2] font-mono">{course.lessons?.length || 0} Lessons</span>
               </div>
               <div className="bg-white/80 p-3.5 rounded-xl border border-[#E2E8F0] clay-pill">
                 <span className="text-[#64748B] block font-semibold">Total Duration:</span>
@@ -782,194 +641,133 @@ const CourseBuilder = () => {
             </div>
           </div>
 
-          {/* Curriculum Syllabus Modules Accordion */}
+          {/* Curriculum Lessons List */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#2C51A2]">
-                Curriculum Syllabus Tree
+                Curriculum Lessons Tree
               </h3>
               <span className="text-xs text-[#64748B] font-semibold">
-                {course.modules?.length || 0} Chapters formulated
+                {course.lessons?.length || 0} Lessons formulated
               </span>
             </div>
 
-            {(!course.modules || course.modules.length === 0) ? (
+            {(!course.lessons || course.lessons.length === 0) ? (
               <div className="clay-card p-8 rounded-2xl text-center">
                 <Layers className="w-8 h-8 text-[#64748B] mx-auto mb-2" />
-                <h4 className="text-xs font-bold uppercase text-[#2C51A2]">No Modules Added Yet</h4>
+                <h4 className="text-xs font-bold uppercase text-[#2C51A2]">No Lessons Added Yet</h4>
                 <p className="text-xs text-[#64748B] mt-1 mb-4">
-                  Divide your course into logical sections (e.g. Module 1: Architecture, Module 2: Testing).
+                  Add training lessons directly under this course program.
                 </p>
-                <Button variant="primary" size="sm" icon={Plus} onClick={() => handleOpenModuleModal()}>
-                  Create First Module
+                <Button variant="primary" size="sm" icon={Plus} onClick={() => handleOpenLessonModal()}>
+                  Create First Lesson
                 </Button>
               </div>
             ) : (
-              course.modules.map((mod, modIdx) => (
-                <div
-                  key={mod.id}
-                  className="clay-card rounded-2xl overflow-hidden"
-                >
-                  {/* Module Header Bar */}
-                  <div 
-                    className="p-4 sm:p-5 border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    style={{
-                      background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFD 100%)'
-                    }}
+              <div className="space-y-3">
+                {course.lessons.map((lesson, lesIdx) => (
+                  <div
+                    key={lesson.id}
+                    className="clay-card p-4 sm:p-5 rounded-2xl border border-[#E2E8F0] hover:border-[#2C51A2]/50 clay-card-hover bg-white transition-all shadow-xs"
                   >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="bg-[#2C51A2] text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full clay-pill">
-                          Module {mod.order_index || modIdx + 1}
-                        </span>
-                        <h4 className="text-sm font-bold text-[#172B4D]">{mod.title}</h4>
-                      </div>
-                      {mod.description && (
-                        <p className="text-xs text-[#64748B] mt-1 ml-0 sm:ml-1 leading-relaxed">
-                          {mod.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        icon={Plus}
-                        onClick={() => handleOpenLessonModal(mod.id)}
-                      >
-                        Add Lesson
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={Edit3}
-                        onClick={() => handleOpenModuleModal(mod)}
-                      />
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        icon={Trash2}
-                        onClick={() => handleDeleteModule(mod.id, mod.title)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Lessons List Inside Module */}
-                  <div className="p-4 sm:p-5 bg-white/60">
-                    {(!mod.lessons || mod.lessons.length === 0) ? (
-                      <div className="p-5 border border-dashed border-[#CBD5E1] rounded-xl text-center text-xs text-[#64748B] bg-[#F8FAFC]">
-                        No lessons in this module. Click "Add Lesson" to author content.
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {mod.lessons.map((lesson, lesIdx) => (
-                          <div
-                            key={lesson.id}
-                            className="p-4 rounded-xl border border-[#E2E8F0] hover:border-[#2C51A2]/50 clay-card-hover bg-white transition-all shadow-xs"
-                          >
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                              <div className="flex items-start gap-3">
-                                <div 
-                                  className="p-2.5 rounded-xl shrink-0 mt-0.5"
-                                  style={{
-                                    background: 'linear-gradient(145deg, #EFF6FF 0%, #DBEAFE 100%)',
-                                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.9)'
-                                  }}
-                                >
-                                  {getLessonTypeIcon(lesson.lesson_type)}
-                                </div>
-                                <div>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-[11px] font-extrabold text-[#2C51A2] font-mono">
-                                      {lesIdx + 1}.
-                                    </span>
-                                    <h5 className="text-xs font-bold text-[#172B4D]">{lesson.title}</h5>
-                                    <Badge variant="default" size="sm">
-                                      {lesson.lesson_type}
-                                    </Badge>
-                                    {lesson.is_mandatory == 1 && (
-                                      <Badge variant="warning" size="sm">
-                                        Mandatory
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-4 text-[11px] text-[#64748B] mt-1.5 font-medium">
-                                    <span className="flex items-center gap-1">
-                                      <Clock className="w-3.5 h-3.5 text-[#2C51A2]" />
-                                      {lesson.duration_minutes} Minutes
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                      <Paperclip className="w-3.5 h-3.5 text-[#2C51A2]" />
-                                      {lesson.materials?.length || 0} Materials Attached
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  icon={Upload}
-                                  onClick={() => handleOpenMaterialModal(lesson)}
-                                >
-                                  Materials ({lesson.materials?.length || 0})
-                                </Button>
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  icon={Edit3}
-                                  onClick={() => handleOpenLessonModal(mod.id, lesson)}
-                                />
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  icon={Trash2}
-                                  onClick={() => handleDeleteLesson(lesson.id, lesson.title)}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Attached Materials Preview Bar */}
-                            {lesson.materials && lesson.materials.length > 0 && (
-                              <div className="mt-3.5 pt-3 border-t border-[#F1F5F9] flex flex-wrap items-center gap-2 text-xs">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
-                                  Attached Files:
-                                </span>
-                                {lesson.materials.map((mat) => (
-                                  <div
-                                    key={mat.id}
-                                    className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[#CBD5E1] rounded-lg text-[11px] clay-pill"
-                                  >
-                                    <Paperclip className="w-3 h-3 text-[#2C51A2]" />
-                                    <span className="font-bold text-[#172B4D] truncate max-w-[200px]">
-                                      {mat.file_name}
-                                    </span>
-                                    {mat.file_size_kb > 0 && (
-                                      <span className="text-[#64748B] font-mono">
-                                        ({Math.round(mat.file_size_kb)} KB)
-                                      </span>
-                                    )}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteMaterial(mat.id)}
-                                      className="text-[#DC2626] hover:text-[#991B1B] font-bold ml-1 active:scale-95"
-                                      title="Remove file"
-                                    >
-                                      ×
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div 
+                          className="p-2.5 rounded-xl shrink-0 mt-0.5"
+                          style={{
+                            background: 'linear-gradient(145deg, #EFF6FF 0%, #DBEAFE 100%)',
+                            boxShadow: '0 2px 4px rgba(16, 185, 129, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.9)'
+                          }}
+                        >
+                          {getLessonTypeIcon(lesson.lesson_type)}
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[11px] font-extrabold text-[#2C51A2] font-mono">
+                              {lesIdx + 1}.
+                            </span>
+                            <h5 className="text-sm font-bold text-[#172B4D]">{lesson.title}</h5>
+                            <Badge variant="default" size="sm">
+                              {lesson.lesson_type}
+                            </Badge>
+                            {lesson.is_mandatory == 1 && (
+                              <Badge variant="warning" size="sm">
+                                Mandatory
+                              </Badge>
                             )}
+                          </div>
+                          <div className="flex items-center gap-4 text-[11px] text-[#64748B] mt-1.5 font-medium">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-[#2C51A2]" />
+                              {lesson.duration_minutes} Minutes
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Paperclip className="w-3.5 h-3.5 text-[#2C51A2]" />
+                              {lesson.materials?.length || 0} Materials Attached
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={Upload}
+                          onClick={() => handleOpenMaterialModal(lesson)}
+                        >
+                          Materials ({lesson.materials?.length || 0})
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={Edit3}
+                          onClick={() => handleOpenLessonModal(lesson)}
+                        />
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon={Trash2}
+                          onClick={() => handleDeleteLesson(lesson.id, lesson.title)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Attached Materials Preview Bar */}
+                    {lesson.materials && lesson.materials.length > 0 && (
+                      <div className="mt-3.5 pt-3 border-t border-[#F1F5F9] flex flex-wrap items-center gap-2 text-xs">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+                          Attached Files:
+                        </span>
+                        {lesson.materials.map((mat) => (
+                          <div
+                            key={mat.id}
+                            className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-[#CBD5E1] rounded-lg text-[11px] clay-pill"
+                          >
+                            <Paperclip className="w-3 h-3 text-[#2C51A2]" />
+                            <span className="font-bold text-[#172B4D] truncate max-w-[200px]">
+                              {mat.file_name}
+                            </span>
+                            {mat.file_size_kb > 0 && (
+                              <span className="text-[#64748B] font-mono">
+                                ({Math.round(mat.file_size_kb)} KB)
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMaterial(mat.id)}
+                              className="text-[#DC2626] hover:text-[#991B1B] font-bold ml-1 active:scale-95"
+                              title="Remove file"
+                            >
+                              ×
+                            </button>
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>

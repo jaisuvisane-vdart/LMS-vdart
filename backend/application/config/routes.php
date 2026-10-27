@@ -41,6 +41,8 @@ $route['api/modules/(:num)']['put']             = 'api/modules/update/$1';
 $route['api/modules/(:num)']['delete']          = 'api/modules/delete/$1';
 
 // Lessons Routes
+$route['api/courses/(:num)/lessons']['post']   = 'api/lessons/create_for_course/$1';
+$route['api/courses/(:num)/lessons']['get']    = 'api/lessons/index_for_course/$1';
 $route['api/modules/(:num)/lessons']['post']    = 'api/lessons/create/$1';
 $route['api/lessons/(:num)']['get']             = 'api/lessons/show/$1';
 $route['api/lessons/(:num)']['put']             = 'api/lessons/update/$1';
@@ -48,7 +50,9 @@ $route['api/lessons/(:num)']['delete']          = 'api/lessons/delete/$1';
 
 // Materials Routes
 $route['api/lessons/(:num)/materials']['post']  = 'api/materials/upload/$1';
-$route['api/materials/(:num)/preview']['get']    = 'api/materials/preview/$1';
+$route['api/materials/(:num)/preview']['get']   = 'api/materials/preview/$1';
+$route['api/materials/(:num)/stream']    = 'api/materials/stream/$1';
+$route['api/materials/(:num)/download']  = 'api/materials/download/$1';
 $route['api/materials/(:num)']['delete']        = 'api/materials/delete/$1';
 
 // Phase 3: Course Assignments Routes

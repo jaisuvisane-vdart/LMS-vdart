@@ -43,12 +43,17 @@ class Assignment_model extends CI_Model {
                 continue;
             }
 
+            $days = (int)($course['duration_days'] ?? 30);
+            $effective_due_date = !empty($due_date)
+                ? $due_date
+                : ($days > 0 ? date('Y-m-d 23:59:59', strtotime("+{$days} days")) : null);
+
             $insert_data = [
                 'course_id'           => $course_id,
                 'learner_id'          => $lid,
                 'assigned_by'         => $assigned_by,
                 'assigned_at'         => date('Y-m-d H:i:s'),
-                'due_date'            => !empty($due_date) ? $due_date : null,
+                'due_date'            => $effective_due_date,
                 'status'              => 'assigned',
                 'progress_percentage' => 0.00,
                 'created_at'          => date('Y-m-d H:i:s'),
@@ -153,8 +158,7 @@ class Assignment_model extends CI_Model {
         foreach ($assignments as &$a) {
             // Count total and completed lessons for this course assignment
             $this->db->from('lessons l');
-            $this->db->join('course_modules cm', 'cm.id = l.module_id');
-            $this->db->where('cm.course_id', $a['course_id']);
+            $this->db->where('l.course_id', $a['course_id']);
             $a['total_lessons'] = $this->db->count_all_results();
 
             $this->db->where('assignment_id', $a['id']);

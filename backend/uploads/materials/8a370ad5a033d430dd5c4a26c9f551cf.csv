@@ -1,0 +1,8 @@
+ID,Topic Name,Target Benchmark,Achieved Score,Proficiency Level,Evaluation Date
+101,Core Syntax & Architecture,85.0%,92.5%,Mastery Benchmark,2026-10-20
+102,Security Protocols & Encryption,80.0%,88.0%,Proficient,2026-10-21
+103,State Management & Lifecycle,85.0%,95.0%,Mastery Benchmark,2026-10-22
+104,Database Indexing & Queries,80.0%,84.5%,Proficient,2026-10-23
+105,API Governance & Contract Tests,90.0%,96.0%,Mastery Benchmark,2026-10-24
+106,Error Handling & Logging,80.0%,89.0%,Proficient,2026-10-25
+107,CI/CD Pipeline Deployment,85.0%,91.5%,Mastery Benchmark,2026-10-26

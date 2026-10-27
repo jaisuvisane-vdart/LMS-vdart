@@ -547,7 +547,7 @@ class Auth extends API_Controller {
         $user = $this->users->get_by_email($email);
         if (!$user) {
             return $this->error_response(
-                'No corporate LMS account found for Google email: ' . $email . '. Please contact your system administrator to provision your account.',
+                'No corporate LMS account found for Google email: ' . $email . '. Please contact your system administrator to create your account.',
                 403
             );
         }

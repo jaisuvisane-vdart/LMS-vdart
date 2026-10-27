@@ -103,6 +103,7 @@ const AuditLogs = () => {
     switch (action) {
       case 'USER_LOGIN':
         return 'success';
+      case 'USER_CREATED':
       case 'USER_PROVISIONED':
       case 'COURSE_ASSIGNED':
         return 'primary';
@@ -236,7 +237,7 @@ const AuditLogs = () => {
             options={[
               { value: '', label: 'All Logged Actions' },
               { value: 'USER_LOGIN', label: 'USER_LOGIN' },
-              { value: 'USER_PROVISIONED', label: 'USER_PROVISIONED' },
+              { value: 'USER_CREATED', label: 'USER_CREATED' },
               { value: 'USER_UPDATED', label: 'USER_UPDATED' },
               { value: 'USER_STATUS_CHANGED', label: 'USER_STATUS_CHANGED' },
               { value: 'COURSE_ASSIGNED', label: 'COURSE_ASSIGNED' },

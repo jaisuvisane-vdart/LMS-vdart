@@ -34,8 +34,12 @@ const ExamRunner = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const timerRef = useRef(null);
 
-  // Submission state
+  // Submission state & proctoring refs
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tabViolations, setTabViolations] = useState(0);
+  const isSubmittingRef = useRef(false);
+  const lastViolationTimeRef = useRef(0);
+  const tabViolationsRef = useRef(0);
 
   const initAttempt = async () => {
     try {
@@ -47,6 +51,15 @@ const ExamRunner = () => {
         setAttemptData(data);
         setQuestions(data.assessment?.questions || []);
         setTimeLeft(data.remaining_seconds || 1800);
+
+        // Request fullscreen lockdown mode
+        if (document.documentElement.requestFullscreen) {
+          try {
+            await document.documentElement.requestFullscreen();
+          } catch (fsErr) {
+            console.warn('Fullscreen request bypassed:', fsErr);
+          }
+        }
       }
     } catch (err) {
       console.error('Failed to initialize assessment:', err);
@@ -62,6 +75,150 @@ const ExamRunner = () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [assessmentId]);
+
+  // Tab Switch Lockdown & Fullscreen Monitor (Strict Zero Warnings)
+  useEffect(() => {
+    if (loading || !attemptData || isSubmitting) return;
+
+    const handleViolation = () => {
+      if (isSubmittingRef.current || isSubmitting) return;
+
+      const now = Date.now();
+      // Debounce rapid multi-events firing simultaneously within 2000ms
+      if (now - lastViolationTimeRef.current < 2000) return;
+      lastViolationTimeRef.current = now;
+
+      tabViolationsRef.current += 1;
+      const count = tabViolationsRef.current;
+      setTabViolations(count);
+
+      if (count === 1) {
+        // Attempt 1: Warn the user that tab switching is prohibited
+        showAlert({
+          title: 'Proctoring Warning: Tab Switch Prohibited',
+          message: 'You are not allowed to switch tabs or leave the examination window during the test. If you attempt to switch tabs a second time, the test will be immediately closed and submitted.',
+          type: 'warning',
+        });
+      } else if (count >= 2) {
+        // Attempt 2: Test is immediately closed and submitted
+        showAlert({
+          title: 'Examination Terminated: Tab Switch Violation',
+          message: 'You attempted to switch tabs a second time. In accordance with examination rules, your test has been closed and automatically submitted.',
+          type: 'error',
+        });
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+
+        submitAnswers(count);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleViolation();
+      }
+    };
+
+    const onWindowBlur = () => {
+      handleViolation();
+    };
+
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement && !isSubmittingRef.current) {
+        handleViolation();
+      }
+    };
+
+    const onBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('blur', onWindowBlur);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onWindowBlur);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [loading, attemptData, isSubmitting]);
+
+  // Content Copy & Tab-Switching Keyboard Prevention Listener
+  useEffect(() => {
+    if (loading || !attemptData || isSubmitting) return;
+
+    const handleKeyDown = (e) => {
+      const key = e.key.toLowerCase();
+
+      // Block tab switching hotkeys
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'Tab' || e.key === 'PageUp' || e.key === 'PageDown')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block new tab, new window, close tab
+      if ((e.ctrlKey || e.metaKey) && ['t', 'n', 'w'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block browser reload
+      if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && key === 'r')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block Escape and F11
+      if (e.key === 'F11' || e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block history traversal
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block copy, cut, paste, devtools
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'u', 'p', 's', 'a'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        showAlert({
+          title: 'Action Prohibited',
+          message: 'Copying, pasting, or inspecting examination content is disabled by exam security policy.',
+          type: 'warning',
+        });
+        return false;
+      }
+
+      if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c'].includes(key))) {
+        e.preventDefault();
+        e.stopPropagation();
+        showAlert({
+          title: 'Action Prohibited',
+          message: 'Developer inspection tools are strictly disabled during the examination.',
+          type: 'warning',
+        });
+        return false;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [loading, attemptData, isSubmitting]);
 
   // Timer Tick Effect
   useEffect(() => {
@@ -99,16 +256,27 @@ const ExamRunner = () => {
     }));
   };
 
-  const submitAnswers = async () => {
-    if (!attemptData) return;
+  const submitAnswers = async (violationsCount = 0) => {
+    if (!attemptData || isSubmittingRef.current) return;
     try {
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
+
+      // Release fullscreen on completion
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+
       const answersArray = Object.entries(answers).map(([qId, oId]) => ({
         question_id: parseInt(qId),
         selected_option_id: parseInt(oId),
       }));
 
-      const res = await assessmentService.submitAttempt(attemptData.attempt_id, answersArray);
+      const res = await assessmentService.submitAttempt(
+        attemptData.attempt_id,
+        answersArray,
+        violationsCount || tabViolationsRef.current
+      );
       if (res.status === 'success') {
         navigate(`/learner/assessment-attempts/${attemptData.attempt_id}/result`);
       }
@@ -119,6 +287,7 @@ const ExamRunner = () => {
         type: 'error',
       });
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -185,10 +354,19 @@ const ExamRunner = () => {
       {/* Top Test Control Header Bar */}
       <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-20">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
               Attempt #{attemptData.attempt_number}
             </span>
+            {tabViolations === 1 ? (
+              <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#FEF3C7] text-[#92400E] px-2.5 py-0.5 rounded-full border border-[#FDE68A]">
+                1 Tab Switch Warning (Attempt 2 Closes Test)
+              </span>
+            ) : (
+              <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#E2E9F4] text-[#1E3B78] px-2.5 py-0.5 rounded-full border border-[#CBD5E1]">
+                Fullscreen Lockdown Active
+              </span>
+            )}
             <span className="text-xs text-[#64748B] font-semibold">{attemptData.assessment?.course_title}</span>
           </div>
           <h1 className="text-lg sm:text-xl font-bold text-[#1E3B78] tracking-tight mt-1">
@@ -213,7 +391,8 @@ const ExamRunner = () => {
             variant="navy"
             size="md"
             icon={Send}
-            onClick={() => setConfirmModalOpen(true)}
+            loading={isSubmitting}
+            onClick={handleConfirmSubmit}
           >
             Submit Exam
           </Button>

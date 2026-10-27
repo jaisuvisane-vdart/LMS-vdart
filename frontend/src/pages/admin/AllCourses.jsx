@@ -9,6 +9,7 @@ import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
 import ActionMenu from '../../components/common/ActionMenu';
+import UnifiedCourseCreator from '../../components/courses/UnifiedCourseCreator';
 import {
   BookOpen,
   Plus,
@@ -19,8 +20,7 @@ import {
   Edit3,
   Trash2,
   Users,
-  Filter,
-  ArrowLeft
+  Filter
 } from 'lucide-react';
 
 const AllCourses = () => {
@@ -39,17 +39,9 @@ const AllCourses = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // View Mode: 'list' | 'create'
+  // View Mode: 'list' | 'create' | 'edit'
   const [viewMode, setViewMode] = useState('list');
-  const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    category: 'Software Engineering',
-    course_type: '',
-    description: '',
-    estimated_duration_minutes: 60,
-    passing_percentage: 80,
-  });
+  const [editingCourseId, setEditingCourseId] = useState(null);
 
   const fetchCourses = async () => {
     try {
@@ -83,42 +75,6 @@ const AllCourses = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchCourses();
-  };
-
-  const handleCreateCourse = async (e) => {
-    e.preventDefault();
-    if (!formData.course_type) {
-      showAlert({
-        title: 'Validation Notice',
-        message: 'Course Type is mandatory. Please select Certified or Non Certified.',
-        type: 'warning',
-      });
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const res = await courseService.createCourse(formData);
-      if (res.status === 'success') {
-        setViewMode('list');
-        setFormData({
-          title: '',
-          category: 'Software Engineering',
-          course_type: '',
-          description: '',
-          estimated_duration_minutes: 60,
-          passing_percentage: 80,
-        });
-        navigate(`/instructor/course-builder?courseId=${res.data.id}`);
-      }
-    } catch (err) {
-      showAlert({
-        title: 'Creation Error',
-        message: err.response?.data?.message || err.message || 'Error creating course',
-        type: 'error',
-      });
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handleTogglePublish = async (course) => {
@@ -171,109 +127,20 @@ const AllCourses = () => {
     }
   };
 
-  if (viewMode === 'create') {
+  if (viewMode === 'create' || viewMode === 'edit') {
     return (
-      <div className="space-y-6">
-        {/* Header Banner with Back Button */}
-        <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
-                Admin Oversight
-              </span>
-              <span className="text-xs text-[#64748B]">Curriculum Provisioning Page</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#172B4D] uppercase tracking-wide mt-1.5">
-              Create New Training Program
-            </h1>
-            <p className="text-xs text-[#64748B] mt-0.5 max-w-2xl leading-relaxed">
-              Initialize curriculum metadata, duration, category, and passing standard.
-            </p>
-          </div>
-          <div>
-            <Button variant="secondary" size="md" icon={ArrowLeft} onClick={() => setViewMode('list')}>
-              Back to Catalog
-            </Button>
-          </div>
-        </div>
-
-        {/* Full Page Course Creation Card */}
-        <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm">
-          <form onSubmit={handleCreateCourse} className="space-y-5 w-full">
-            <Input
-              label="Course Title"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g. Advanced Software Engineering & API Security"
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select
-                label="Department / Category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                options={[
-                  { value: 'Software Engineering', label: 'Software Engineering' },
-                  { value: 'Frontend Engineering', label: 'Frontend Engineering' },
-                  { value: 'Information Security', label: 'Information Security' },
-                  { value: 'Corporate Compliance', label: 'Corporate Compliance' },
-                  { value: 'Quality Assurance', label: 'Quality Assurance' },
-                ]}
-              />
-
-              <Select
-                label="Course Type"
-                required
-                value={formData.course_type}
-                onChange={(e) => setFormData({ ...formData, course_type: e.target.value })}
-                options={[
-                  { value: '', label: '-- Select Course Type --' },
-                  { value: 'certified', label: 'Certified' },
-                  { value: 'non_certified', label: 'Non Certified' },
-                ]}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-[#172B4D] mb-1.5">
-                Course Description & Objectives
-              </label>
-              <textarea
-                rows="4"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full text-[#172B4D] text-sm p-3.5 rounded-xl focus:outline-none clay-input"
-                placeholder="Outline what trainee employees will master upon completing this curriculum..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Estimated Duration (Minutes)"
-                type="number"
-                value={formData.estimated_duration_minutes}
-                onChange={(e) => setFormData({ ...formData, estimated_duration_minutes: e.target.value })}
-              />
-              <Input
-                label="Passing Standard (%)"
-                type="number"
-                value={formData.passing_percentage}
-                onChange={(e) => setFormData({ ...formData, passing_percentage: e.target.value })}
-              />
-            </div>
-
-            <div className="pt-5 border-t border-[#E2E8F0] flex items-center justify-end gap-3">
-              <Button variant="secondary" onClick={() => setViewMode('list')}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="primary" loading={submitting}>
-                Save & Open Curriculum Studio
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <UnifiedCourseCreator
+        courseId={viewMode === 'edit' ? editingCourseId : null}
+        onCancel={() => {
+          setViewMode('list');
+          setEditingCourseId(null);
+        }}
+        onSuccess={() => {
+          setViewMode('list');
+          setEditingCourseId(null);
+          fetchCourses();
+        }}
+      />
     );
   }
 
@@ -377,7 +244,7 @@ const AllCourses = () => {
                 <th className="py-3.5 px-4 text-center">Course Title & Category</th>
                 <th className="py-3.5 px-4 text-center">Course Type</th>
                 <th className="py-3.5 px-4 text-center">Author / Instructor</th>
-                <th className="py-3.5 px-4 text-center">Modules & Lessons</th>
+                <th className="py-3.5 px-4 text-center">Lessons</th>
                 <th className="py-3.5 px-4 text-center">Passing Standard</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-center">Actions</th>
@@ -421,8 +288,7 @@ const AllCourses = () => {
                       <div className="text-[10px] text-[#64748B]">{course.instructor_department}</div>
                     </td>
                     <td className="py-3.5 px-4 text-center">
-                      <span className="font-extrabold text-[#2C51A2] font-mono">{course.modules_count}</span> modules •{' '}
-                      <span className="font-bold text-[#2C51A2] font-mono">{course.lessons_count}</span> lessons
+                      <span className="font-bold text-[#2C51A2] font-mono">{course.lessons_count || 0}</span> lessons
                     </td>
                     <td className="py-3.5 px-4 text-center font-bold text-[#172B4D] font-mono">
                       {course.passing_percentage}%
@@ -459,9 +325,12 @@ const AllCourses = () => {
                             },
                           },
                           {
-                            label: 'Edit Curriculum',
+                            label: 'Edit Course',
                             icon: Edit3,
-                            onClick: () => navigate(`/instructor/course-builder?courseId=${course.id}`),
+                            onClick: () => {
+                              setEditingCourseId(course.id);
+                              setViewMode('edit');
+                            },
                           },
                           {
                             label: 'Delete Course',

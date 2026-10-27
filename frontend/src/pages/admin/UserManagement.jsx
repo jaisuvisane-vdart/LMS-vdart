@@ -693,11 +693,11 @@ const UserManagement = () => {
                 Admin Directory
               </span>
               <span className="text-xs text-[#64748B]">
-                {isEdit ? 'Account Modification Page' : 'New Employee Provisioning Page'}
+                {isEdit ? 'Account Modification Page' : 'Create User Account Page'}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#172B4D] uppercase tracking-wide mt-1.5">
-              {isEdit ? `Edit Profile: ${editingUser?.first_name} ${editingUser?.last_name}` : 'Provision Employee Account'}
+              {isEdit ? `Edit Profile: ${editingUser?.first_name} ${editingUser?.last_name}` : 'Create User Account'}
             </h1>
             <p className="text-xs text-[#64748B] mt-0.5 max-w-2xl leading-relaxed">
               Manage enterprise access credentials, system role authorizations, and departmental mapping.
@@ -782,16 +782,7 @@ const UserManagement = () => {
                 label="Designation / Title"
                 value={formData.designation}
                 onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                placeholder="e.g. Trainee Backend Developer"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Contact Phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+1-555-0100"
+                placeholder="e.g. Software Engineer"
               />
             </div>
 
@@ -800,7 +791,7 @@ const UserManagement = () => {
                 Cancel
               </Button>
               <Button variant="primary" size="md" type="submit" disabled={submitting}>
-                {submitting ? 'Saving...' : editingUser ? 'Update Account' : 'Provision User'}
+                {submitting ? 'Saving...' : editingUser ? 'Update Account' : 'Create User'}
               </Button>
             </div>
           </form>
@@ -824,12 +815,12 @@ const UserManagement = () => {
             Employee Accounts & Role Governance
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5 max-w-2xl leading-relaxed">
-            Provision corporate accounts, configure role permissions, govern security status, and oversee employee profiles.
+            Manage corporate accounts, configure role permissions, govern security status, and oversee employee profiles.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Button variant="primary" size="sm" icon={UserPlus} onClick={handleOpenCreateModal}>
-            Provision Employee
+            Create User
           </Button>
         </div>
       </div>
@@ -839,7 +830,7 @@ const UserManagement = () => {
         {[
           { label: 'Total Accounts', value: totalEmployees, sub: 'Registered Users', icon: Users, accent: 'border-t-4 border-[#2C51A2]' },
           { label: 'Instructors', value: instructorsCount, sub: 'Content Creators', icon: Briefcase, accent: 'border-t-4 border-[#1E3B78]' },
-          { label: 'Trainee Learners', value: learnersCount, sub: 'Enrolled Employees', icon: Shield, accent: 'border-t-4 border-[#2C51A2]' },
+          { label: 'Learners', value: learnersCount, sub: 'Enrolled Users', icon: Shield, accent: 'border-t-4 border-[#2C51A2]' },
           { label: 'Active Accounts', value: activeCount, sub: 'Authorized Access', icon: CheckCircle, accent: 'border-t-4 border-[#D97706]' },
         ].map((kpi, idx) => {
           const Icon = kpi.icon;
@@ -928,7 +919,6 @@ const UserManagement = () => {
                 <th className="py-3.5 px-4 text-center">Employee</th>
                 <th className="py-3.5 px-4 text-center">Role</th>
                 <th className="py-3.5 px-4 text-center">Department & Designation</th>
-                <th className="py-3.5 px-4 text-center">Phone</th>
                 <th className="py-3.5 px-4 text-center">Training Progress</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-center">Last Activity</th>
@@ -938,13 +928,13 @@ const UserManagement = () => {
             <tbody className="divide-y divide-[#E2E8F0]/70 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-[#64748B]">
+                  <td colSpan="7" className="py-12 text-center text-[#64748B]">
                     Loading employee directory...
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-12 text-center text-[#64748B]">
+                  <td colSpan="7" className="py-12 text-center text-[#64748B]">
                     No employee accounts found matching the criteria.
                   </td>
                 </tr>
@@ -985,9 +975,6 @@ const UserManagement = () => {
                       <td className="py-3.5 px-4 text-center">
                         <div className="font-bold text-[#172B4D]">{u.designation || 'Unassigned'}</div>
                         <div className="text-[11px] text-[#64748B]">{u.department || 'General'}</div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center text-[#64748B] font-mono">
-                        {u.phone || '—'}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         {roleName === 'learner' ? (

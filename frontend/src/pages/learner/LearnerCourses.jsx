@@ -174,10 +174,14 @@ const LearnerCourses = () => {
                 <Button
                   variant="primary"
                   size="sm"
-                  icon={PlayCircle}
+                  icon={parseFloat(item.progress_percentage) >= 100 || item.status === 'completed' ? CheckCircle : PlayCircle}
                   onClick={() => navigate(`/learner/courses/${item.course_id}?resume=true${item.resumed_lesson_id ? `&lessonId=${item.resumed_lesson_id}` : ''}`)}
                 >
-                  {item.progress_percentage > 0 ? 'Resume Course' : 'Start Course'}
+                  {parseFloat(item.progress_percentage) >= 100 || item.status === 'completed'
+                    ? 'Completed'
+                    : parseFloat(item.progress_percentage) > 0
+                    ? 'Resume Course'
+                    : 'Start Course'}
                 </Button>
               </div>
             </div>

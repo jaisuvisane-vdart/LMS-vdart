@@ -401,7 +401,7 @@ const ReportsAnalytics = () => {
                     boxShadow: 'inset 0 1px 1px rgba(255, 255, 255, 0.2)'
                   }}
                 >
-                  <th className="py-3.5 px-4 text-center">Trainee Employee</th>
+                  <th className="py-3.5 px-4 text-center">Learner</th>
                   <th className="py-3.5 px-4 text-center">Department & Designation</th>
                   <th className="py-3.5 px-4 text-center">Assigned</th>
                   <th className="py-3.5 px-4 text-center">In Progress</th>

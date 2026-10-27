@@ -37,7 +37,6 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
       { name: 'Instructor Dashboard', path: '/instructor/dashboard', icon: LayoutGrid },
       { name: 'My Created Courses', path: '/instructor/courses', icon: BookOpen },
       { name: 'Trainee Assignments', path: '/instructor/assignments', icon: Users },
-      { name: 'Assessment Studio', path: '/instructor/assessments', icon: FileCheck },
       { name: 'Trainee Performance', path: '/instructor/performance', icon: Activity },
       { name: 'Portal Settings', path: '/instructor/settings', icon: Settings },
     ],

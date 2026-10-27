@@ -118,18 +118,16 @@ class Assessment_importer extends API_Controller {
         $course_id = (int)$this->input->post('course_id');
         $assessment_id = (int)$this->input->post('assessment_id');
 
-        if ($course_id <= 0) {
-            return $this->error_response('Target Course ID is required.', 422);
-        }
+        // Verify course ownership only if course_id > 0 (existing course)
+        if ($course_id > 0) {
+            $course = $this->courses->get_by_id($course_id);
+            if (!$course) {
+                return $this->error_response('Associated course not found.', 404);
+            }
 
-        // Verify course ownership
-        $course = $this->courses->get_by_id($course_id);
-        if (!$course) {
-            return $this->error_response('Associated course not found.', 404);
-        }
-
-        if ($this->current_user['role'] === 'instructor' && (int)$course['instructor_id'] !== (int)$this->current_user['id']) {
-            return $this->error_response('Unauthorized: You can only import assessments into your authored courses.', 403);
+            if ($this->current_user['role'] === 'instructor' && (int)$course['instructor_id'] !== (int)$this->current_user['id']) {
+                return $this->error_response('Unauthorized: You can only import assessments into your authored courses.', 403);
+            }
         }
 
         if (empty($_FILES['file']['name'])) {
@@ -197,6 +195,19 @@ class Assessment_importer extends API_Controller {
 
             // Normalize and Validate
             $result = $this->normalizer->normalize_and_validate($raw_questions);
+
+            // If transient parse (e.g. from Course Creation Studio before course persistence), return extracted items directly
+            if ($course_id <= 0) {
+                @unlink($target_path);
+                return $this->json_response([
+                    'session_token'     => null,
+                    'original_filename' => $original_name,
+                    'file_format'       => $ext,
+                    'file_size_kb'      => $file_size_kb,
+                    'summary'           => $result['summary'],
+                    'items'             => $result['items'],
+                ], 'Quiz file parsed and validated successfully.');
+            }
 
             // Generate Session Token
             $session_token = bin2hex(random_bytes(32));

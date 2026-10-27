@@ -72,12 +72,15 @@ CREATE TABLE courses (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     instructor_id INT UNSIGNED NOT NULL,
     category VARCHAR(100) NOT NULL,
+    course_type ENUM('certified', 'non_certified') NOT NULL DEFAULT 'certified',
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT NULL,
     thumbnail_url VARCHAR(255) NULL,
     status ENUM('draft', 'published', 'archived') NOT NULL DEFAULT 'draft',
     estimated_duration_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+    duration_days INT UNSIGNED NOT NULL DEFAULT 30,
+    certificate_template VARCHAR(50) NOT NULL DEFAULT 'classic',
     passing_percentage DECIMAL(5,2) NOT NULL DEFAULT 70.00,
     published_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -110,16 +113,20 @@ CREATE TABLE course_modules (
 -- ------------------------------------------------------------------------------
 CREATE TABLE lessons (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    module_id INT UNSIGNED NOT NULL,
+    course_id INT UNSIGNED NOT NULL,
+    module_id INT UNSIGNED NULL,
     title VARCHAR(255) NOT NULL,
     content LONGTEXT NULL,
-    lesson_type ENUM('text', 'video', 'document', 'quiz') NOT NULL DEFAULT 'text',
+    lesson_type VARCHAR(50) NOT NULL DEFAULT 'text',
     order_index INT UNSIGNED NOT NULL DEFAULT 1,
     duration_minutes INT UNSIGNED NOT NULL DEFAULT 10,
     is_mandatory TINYINT(1) NOT NULL DEFAULT 1,
+    status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_lessons_module FOREIGN KEY (module_id) REFERENCES course_modules (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_lessons_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_lessons_module FOREIGN KEY (module_id) REFERENCES course_modules (id) ON DELETE SET NULL ON UPDATE CASCADE,
+    INDEX idx_lessons_course (course_id, order_index),
     INDEX idx_lessons_module (module_id, order_index)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -203,6 +210,7 @@ CREATE TABLE assessments (
     time_limit_minutes INT UNSIGNED NOT NULL DEFAULT 30,
     max_attempts INT UNSIGNED NOT NULL DEFAULT 1,
     is_active TINYINT(1) NOT NULL DEFAULT 1,
+    show_score_to_learner TINYINT(1) NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_assessments_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -261,6 +269,7 @@ CREATE TABLE assessment_attempts (
     percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     status ENUM('in_progress', 'completed', 'timed_out') NOT NULL DEFAULT 'in_progress',
     is_passed TINYINT(1) NOT NULL DEFAULT 0,
+    tab_switch_count INT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_attempts_assessment FOREIGN KEY (assessment_id) REFERENCES assessments (id) ON DELETE CASCADE ON UPDATE CASCADE,
@@ -404,9 +413,9 @@ CREATE TABLE IF NOT EXISTS user_otps (
 -- Password hash generated with PHP password_hash('Admin@123', PASSWORD_BCRYPT)
 -- ------------------------------------------------------------------------------
 INSERT INTO roles (id, name, display_name, description) VALUES
-(1, 'admin', 'System Administrator', 'Full access to users, settings, system reports, courses, and audit logs'),
-(2, 'instructor', 'Course Instructor', 'Author courses, manage curriculum, upload materials, create assessments, and assign courses'),
-(3, 'learner', 'Trainee Employee', 'Access assigned courses, study lessons, complete materials, and take assessments');
+(1, 'admin', 'Admin', 'Full access to users, settings, system reports, courses, and audit logs'),
+(2, 'instructor', 'Instructor', 'Author courses, manage curriculum, upload materials, create assessments, and assign courses'),
+(3, 'learner', 'Learner', 'Access assigned courses, study lessons, complete materials, and take assessments');
 
 INSERT INTO users (id, role_id, employee_id, first_name, last_name, email, password_hash, department, designation, phone, status) VALUES
 (1, 1, 'EMP001', 'System', 'Admin', 'admin@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Information Technology', 'LMS Administrator', '+1-555-0100', 'active'),

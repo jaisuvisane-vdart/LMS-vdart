@@ -11,6 +11,16 @@ export default defineConfig({
         target: 'http://localhost/LMS/backend',
         changeOrigin: true,
         secure: false,
+      },
+      '/LMS': {
+        target: 'http://localhost',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/uploads': {
+        target: 'http://localhost/LMS/backend',
+        changeOrigin: true,
+        secure: false,
       }
     }
   }

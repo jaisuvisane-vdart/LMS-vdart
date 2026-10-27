@@ -59,12 +59,8 @@ class Course_model extends CI_Model {
         // Enhance with module and lesson counts
         foreach ($courses as &$course) {
             $this->db->where('course_id', $course['id']);
-            $course['modules_count'] = $this->db->count_all_results('course_modules');
-
-            $this->db->from('lessons l');
-            $this->db->join('course_modules cm', 'cm.id = l.module_id');
-            $this->db->where('cm.course_id', $course['id']);
-            $course['lessons_count'] = $this->db->count_all_results();
+            $course['lessons_count'] = $this->db->count_all_results('lessons');
+            $course['modules_count'] = 0;
 
             $this->db->where('course_id', $course['id']);
             $course['enrolled_count'] = $this->db->count_all_results('course_assignments');
@@ -87,7 +83,7 @@ class Course_model extends CI_Model {
     }
 
     /**
-     * Retrieve complete course hierarchy: course -> modules -> lessons -> materials
+     * Retrieve complete course hierarchy: course -> lessons -> materials
      * @param int $course_id
      * @return array|null
      */
@@ -95,33 +91,43 @@ class Course_model extends CI_Model {
         $course = $this->get_by_id($course_id);
         if (!$course) return null;
 
-        // Fetch modules
+        // Fetch lessons directly under course
         $this->db->where('course_id', $course_id);
         $this->db->order_by('order_index', 'ASC');
-        $modules = $this->db->get('course_modules')->result_array();
+        $this->db->order_by('id', 'ASC');
+        $lessons = $this->db->get('lessons')->result_array();
 
-        foreach ($modules as &$module) {
-            // Fetch lessons for each module
-            $this->db->where('module_id', $module['id']);
-            $this->db->order_by('order_index', 'ASC');
-            $lessons = $this->db->get('lessons')->result_array();
-
-            foreach ($lessons as &$lesson) {
-                // Fetch materials for each lesson
-                $this->db->where('lesson_id', $lesson['id']);
-                $this->db->order_by('id', 'ASC');
-                $lesson['materials'] = $this->db->get('lesson_materials')->result_array();
-            }
-            $module['lessons'] = $lessons;
+        foreach ($lessons as &$lesson) {
+            // Fetch materials for each lesson
+            $this->db->where('lesson_id', $lesson['id']);
+            $this->db->order_by('id', 'ASC');
+            $lesson['materials'] = $this->db->get('lesson_materials')->result_array();
         }
 
-        $course['modules'] = $modules;
+        $course['lessons'] = $lessons;
+
+        // Provide backwards-compatible module representation
+        $course['modules'] = [
+            [
+                'id'          => 0,
+                'course_id'   => $course_id,
+                'title'       => 'Curriculum Lessons',
+                'order_index' => 1,
+                'lessons'     => $lessons,
+            ]
+        ];
 
         // Fetch active certification assessment linked to this course only if certified
         if (($course['course_type'] ?? 'certified') === 'certified') {
             $this->db->where('course_id', $course_id);
             $this->db->where('is_active', 1);
-            $course['assessment'] = $this->db->get('assessments')->row_array();
+            $ass_row = $this->db->get('assessments')->row_array();
+            if ($ass_row) {
+                $this->load->model('Assessment_model', 'assessments');
+                $course['assessment'] = $this->assessments->get_assessment_by_id($ass_row['id'], false);
+            } else {
+                $course['assessment'] = null;
+            }
         } else {
             $course['assessment'] = null;
         }

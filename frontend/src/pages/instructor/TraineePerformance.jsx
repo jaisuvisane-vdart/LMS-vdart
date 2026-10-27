@@ -410,7 +410,7 @@ const TraineePerformance = () => {
           <table className="w-full text-center border-collapse min-w-[760px]">
             <thead>
               <tr className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white text-[11px] font-bold uppercase tracking-wider text-center">
-                <th className="py-3.5 px-4 text-center">Trainee Employee</th>
+                <th className="py-3.5 px-4 text-center">Learner</th>
                 <th className="py-3.5 px-4 text-center">Course & Assessment</th>
                 <th className="py-3.5 px-4 text-center">Attempt</th>
                 <th className="py-3.5 px-4 text-center">Score / Total</th>

@@ -251,9 +251,7 @@ const Header = ({ onToggleSidebar, isSidebarCollapsed }) => {
               <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] text-white shadow-xs">
                 <ShieldCheck className="w-3 h-3 text-white shrink-0" />
                 <span className="text-[10px] font-extrabold tracking-wider uppercase">
-                  {user?.role === 'admin'
-                    ? 'SYSTEM ADMINISTRATOR'
-                    : (user?.role_display_name || user?.role || 'USER').toUpperCase()}
+                  {(user?.role_display_name || (user?.role === 'admin' ? 'ADMIN' : user?.role) || 'USER').toUpperCase()}
                 </span>
               </div>
             </div>

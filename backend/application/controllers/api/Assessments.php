@@ -272,8 +272,9 @@ class Assessments extends API_Controller {
         $learner_id = (int)$this->current_user['id'];
         $input = $this->get_json_input();
         $answers = $input['answers'] ?? [];
+        $tab_switch_count = (int)($input['tab_switch_count'] ?? 0);
 
-        $evaluation = $this->assessments->submit_attempt($attempt_id, $learner_id, $answers);
+        $evaluation = $this->assessments->submit_attempt($attempt_id, $learner_id, $answers, $tab_switch_count);
         if (!$evaluation['status']) {
             return $this->error_response($evaluation['message'], 400);
         }

@@ -55,7 +55,7 @@ class Assessment_model extends CI_Model {
      * Get single assessment with full questions and options
      * Strips answer keys if requested by learner
      */
-    public function get_assessment_by_id($id, $is_learner = false) {
+    public function get_assessment_by_id($id, $is_learner = false, $shuffle_seed = null) {
         $this->db->select('
             a.*,
             c.title AS course_title,
@@ -99,6 +99,35 @@ class Assessment_model extends CI_Model {
                 unset($q['explanation']);
             }
         }
+
+        // Randomize questions and options for each learner attempting the quiz
+        if ($is_learner && !empty($questions)) {
+            if ($shuffle_seed !== null) {
+                mt_srand((int)$shuffle_seed);
+            }
+            // Seeded Fisher-Yates shuffle on questions array
+            for ($i = count($questions) - 1; $i > 0; $i--) {
+                $j = ($shuffle_seed !== null) ? mt_rand(0, $i) : random_int(0, $i);
+                $temp = $questions[$i];
+                $questions[$i] = $questions[$j];
+                $questions[$j] = $temp;
+            }
+            // Seeded Fisher-Yates shuffle on options within each question
+            foreach ($questions as &$q) {
+                if (!empty($q['options']) && is_array($q['options'])) {
+                    for ($oi = count($q['options']) - 1; $oi > 0; $oi--) {
+                        $oj = ($shuffle_seed !== null) ? mt_rand(0, $oi) : random_int(0, $oi);
+                        $temp = $q['options'][$oi];
+                        $q['options'][$oi] = $q['options'][$oj];
+                        $q['options'][$oj] = $temp;
+                    }
+                }
+            }
+            if ($shuffle_seed !== null) {
+                mt_srand(); // Reset RNG to random state
+            }
+        }
+
         $assessment['questions'] = $questions;
         return $assessment;
     }
@@ -116,6 +145,7 @@ class Assessment_model extends CI_Model {
             'time_limit_minutes' => isset($data['time_limit_minutes']) ? (int)$data['time_limit_minutes'] : 30,
             'max_attempts'       => isset($data['max_attempts']) ? (int)$data['max_attempts'] : 1,
             'is_active'          => isset($data['is_active']) ? (int)$data['is_active'] : 1,
+            'show_score_to_learner' => isset($data['show_score_to_learner']) ? (int)$data['show_score_to_learner'] : 1,
             'created_at'         => date('Y-m-d H:i:s'),
         ];
 
@@ -135,6 +165,7 @@ class Assessment_model extends CI_Model {
         if (isset($data['time_limit_minutes'])) $update['time_limit_minutes'] = (int)$data['time_limit_minutes'];
         if (isset($data['max_attempts'])) $update['max_attempts'] = (int)$data['max_attempts'];
         if (isset($data['is_active'])) $update['is_active'] = (int)$data['is_active'];
+        if (isset($data['show_score_to_learner'])) $update['show_score_to_learner'] = (int)$data['show_score_to_learner'];
 
         if (empty($update)) {
             return false;
@@ -349,8 +380,8 @@ class Assessment_model extends CI_Model {
                     'submitted_at' => date('Y-m-d H:i:s'),
                 ]);
             } else {
-                // Resume existing active attempt
-                $assessment_data = $this->get_assessment_by_id($assessment['id'], true);
+                // Resume existing active attempt (consistently seeded by active attempt ID)
+                $assessment_data = $this->get_assessment_by_id($assessment['id'], true, (int)$active_attempt['id']);
                 $remaining_seconds = max(0, ($assessment['time_limit_minutes'] * 60) - (time() - $started_ts));
                 return [
                     'status'            => true,
@@ -392,7 +423,8 @@ class Assessment_model extends CI_Model {
         ]);
         $attempt_id = $this->db->insert_id();
 
-        $assessment_data = $this->get_assessment_by_id($assessment['id'], true);
+        // Retrieve randomized questions & options seeded uniquely for this attempt
+        $assessment_data = $this->get_assessment_by_id($assessment['id'], true, (int)$attempt_id);
 
         return [
             'status'            => true,
@@ -475,7 +507,7 @@ class Assessment_model extends CI_Model {
     /**
      * Submit and auto-grade assessment attempt
      */
-    public function submit_attempt($attempt_id, $learner_id, $submitted_answers = []) {
+    public function submit_attempt($attempt_id, $learner_id, $submitted_answers = [], $tab_switch_count = 0) {
         $attempt = $this->db->get_where('assessment_attempts', [
             'id'         => (int)$attempt_id,
             'learner_id' => (int)$learner_id
@@ -552,13 +584,14 @@ class Assessment_model extends CI_Model {
 
         // Update attempt
         $this->db->where('id', $attempt['id'])->update('assessment_attempts', [
-            'submitted_at' => $now,
-            'total_score'  => $total_score,
-            'max_score'    => $max_score,
-            'percentage'   => $percentage,
-            'status'       => 'completed',
-            'is_passed'    => $is_passed,
-            'updated_at'   => $now,
+            'submitted_at'     => $now,
+            'total_score'      => $total_score,
+            'max_score'        => $max_score,
+            'percentage'       => $percentage,
+            'status'           => 'completed',
+            'is_passed'        => $is_passed,
+            'tab_switch_count' => (int)$tab_switch_count,
+            'updated_at'       => $now,
         ]);
 
         return [

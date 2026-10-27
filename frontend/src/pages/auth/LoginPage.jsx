@@ -554,14 +554,6 @@ const LoginPage = () => {
                   </p>
                 </div>
 
-                {/* Dev Mode OTP Callout for Testing */}
-                {devOtp && (
-                  <div className="bg-[#EFF6FF] border border-[#BFDBFE] text-[#1E3B78] p-2.5 rounded-xl text-center text-xs">
-                    <span className="text-[10px] uppercase font-bold text-[#64748B] block">Development Mode Test Code</span>
-                    <span className="font-mono font-extrabold text-sm tracking-widest text-[#2C51A2]">{devOtp}</span>
-                  </div>
-                )}
-
                 {/* Error Message */}
                 {errorMessage && (
                   <div className="bg-[#FEE2E2] border border-[#FCA5A5] text-[#DC2626] p-3.5 rounded-xl text-xs font-semibold shadow-xs">
@@ -802,12 +794,12 @@ const LoginPage = () => {
                     </div>
                   </div>
 
-                  {/* First-Time Trainee Detected Notice */}
+                  {/* First-Time User Detected Notice */}
                   {isFirstTimeUser && (
                     <div className="bg-[#EFF6FF] border border-[#BFDBFE] p-3.5 rounded-xl text-xs space-y-1 transition-all">
                       <div className="flex items-center gap-1.5 font-bold text-[#1E3B78]">
                         <ShieldCheck className="w-4 h-4 text-[#2C51A2]" />
-                        <span>First-Time Trainee Setup Detected</span>
+                        <span>First-Time User Setup Detected</span>
                       </div>
                       <p className="text-[#64748B] text-[11px] leading-relaxed">
                         No temporary password required. Click below to verify your corporate email with a 6-digit OTP and establish your personal password.
@@ -984,7 +976,7 @@ const LoginPage = () => {
                       }`}
                       title="Test automatic first-time detection with OTP"
                     >
-                      <div className="text-[10px] uppercase tracking-wider">New Trainee</div>
+                      <div className="text-[10px] uppercase tracking-wider">New User</div>
                     </button>
                   </div>
                 </div>

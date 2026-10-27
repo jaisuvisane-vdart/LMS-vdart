@@ -45,7 +45,7 @@ const InstructorDashboard = () => {
       <WelcomeBanner
         role="instructor"
         actions={
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/instructor/course-builder')}>
+          <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/instructor/courses')}>
             Create New Course
           </Button>
         }
@@ -119,10 +119,10 @@ const InstructorDashboard = () => {
                 <div className="mt-4 pt-4 border-t border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#64748B]">
                   <span className="font-semibold">4 Curriculum Modules • 12 Lessons • 1 Assessment Quiz</span>
                   <button
-                    onClick={() => navigate('/instructor/course-builder')}
+                    onClick={() => navigate('/instructor/courses')}
                     className="text-[#2C51A2] font-bold hover:underline inline-flex items-center gap-1 active:translate-y-0.5"
                   >
-                    <span>Edit Syllabus & Lessons</span>
+                    <span>Manage Syllabus & Lessons</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -136,17 +136,17 @@ const InstructorDashboard = () => {
           <Card title="Curriculum Builder Actions">
             <div className="space-y-2.5">
               <button
-                onClick={() => navigate('/instructor/course-builder')}
+                onClick={() => navigate('/instructor/courses')}
                 className="w-full text-left p-3.5 clay-btn-secondary rounded-xl text-xs font-bold text-[#2C51A2] flex items-center justify-between"
               >
                 <span>Upload Lesson Materials (PDF/Slide)</span>
                 <ArrowUpRight className="w-4 h-4 text-[#2C51A2]" />
               </button>
               <button
-                onClick={() => navigate('/instructor/assessments')}
+                onClick={() => navigate('/instructor/courses')}
                 className="w-full text-left p-3.5 clay-btn-secondary rounded-xl text-xs font-bold text-[#2C51A2] flex items-center justify-between"
               >
-                <span>Formulate Objective Quiz & Questions</span>
+                <span>Author & Configure Course Quizzes</span>
                 <ArrowUpRight className="w-4 h-4 text-[#2C51A2]" />
               </button>
               <button

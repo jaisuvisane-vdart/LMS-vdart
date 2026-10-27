@@ -15,9 +15,7 @@ import ReportsAnalytics from '../pages/admin/ReportsAnalytics';
 import AuditLogs from '../pages/admin/AuditLogs';
 import InstructorDashboard from '../pages/instructor/InstructorDashboard';
 import InstructorCourses from '../pages/instructor/InstructorCourses';
-import CourseBuilder from '../pages/instructor/CourseBuilder';
 import CourseAssignments from '../pages/instructor/CourseAssignments';
-import AssessmentBuilder from '../pages/instructor/AssessmentBuilder';
 import TraineePerformance from '../pages/instructor/TraineePerformance';
 import LearnerDashboard from '../pages/learner/LearnerDashboard';
 import LearnerCourses from '../pages/learner/LearnerCourses';
@@ -84,9 +82,9 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="/instructor/dashboard" replace />} />
         <Route path="dashboard" element={<InstructorDashboard />} />
         <Route path="courses" element={<InstructorCourses />} />
-        <Route path="course-builder" element={<CourseBuilder />} />
+        <Route path="course-builder" element={<Navigate to="/instructor/courses" replace />} />
         <Route path="assignments" element={<CourseAssignments />} />
-        <Route path="assessments" element={<AssessmentBuilder />} />
+        <Route path="assessments" element={<Navigate to="/instructor/courses" replace />} />
         <Route path="performance" element={<TraineePerformance />} />
         <Route path="settings" element={<Settings />} />
       </Route>

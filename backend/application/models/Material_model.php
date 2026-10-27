@@ -8,11 +8,10 @@ class Material_model extends CI_Model {
     }
 
     public function get_by_id($id) {
-        $this->db->select('lm.*, l.title as lesson_title, cm.course_id, c.title as course_title, c.instructor_id');
+        $this->db->select('lm.*, l.title as lesson_title, l.course_id, c.title as course_title, c.instructor_id');
         $this->db->from('lesson_materials lm');
         $this->db->join('lessons l', 'l.id = lm.lesson_id');
-        $this->db->join('course_modules cm', 'cm.id = l.module_id');
-        $this->db->join('courses c', 'c.id = cm.course_id');
+        $this->db->join('courses c', 'c.id = l.course_id', 'left');
         $this->db->where('lm.id', $id);
         return $this->db->get()->row_array();
     }

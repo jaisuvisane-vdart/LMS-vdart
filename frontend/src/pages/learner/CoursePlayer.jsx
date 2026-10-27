@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDialog } from '../../contexts/DialogContext';
 import courseService from '../../services/courseService';
 import progressService from '../../services/progressService';
+import assessmentService from '../../services/assessmentService';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
@@ -31,11 +32,16 @@ import {
   BookOpen,
   Search,
   Table,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Send,
+  ShieldAlert,
+  HelpCircle,
+  XCircle,
+  FileCheck
 } from 'lucide-react';
 
 const CoursePlayer = () => {
-  const { showAlert } = useDialog();
+  const { showAlert, showConfirm } = useDialog();
   const { courseId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -46,6 +52,26 @@ const CoursePlayer = () => {
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [showMobileSyllabus, setShowMobileSyllabus] = useState(false);
+
+  // In-Page Secure Certification Quiz State
+  const [isQuizActive, setIsQuizActive] = useState(false);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizError, setQuizError] = useState('');
+  const [quizAttemptData, setQuizAttemptData] = useState(null);
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizCurrentIdx, setQuizCurrentIdx] = useState(0);
+  const [quizTimeLeft, setQuizTimeLeft] = useState(0);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+  const [quizResult, setQuizResult] = useState(null);
+  const [tabViolations, setTabViolations] = useState(0);
+  const [unansweredHighlighted, setUnansweredHighlighted] = useState(false);
+
+  // Proctoring and Timer Refs
+  const tabViolationsRef = useRef(0);
+  const lastViolationTimeRef = useRef(0);
+  const isSubmittingQuizRef = useRef(false);
+  const quizTimerRef = useRef(null);
 
   // In-Page Material Viewer State
   const [previewMaterial, setPreviewMaterial] = useState(null);
@@ -81,13 +107,17 @@ const CoursePlayer = () => {
         setCourse(c);
         setProgressData(p);
 
-        // Flatten curriculum lessons
-        const linear = [];
-        (c.modules || []).forEach((mod) => {
-          (mod.lessons || []).forEach((les) => {
-            linear.push({ ...les, module_title: mod.title });
+        // Linear curriculum lessons
+        let linear = [];
+        if (c.lessons && Array.isArray(c.lessons) && c.lessons.length > 0) {
+          linear = c.lessons;
+        } else if (c.modules && Array.isArray(c.modules)) {
+          c.modules.forEach((mod) => {
+            (mod.lessons || []).forEach((les) => {
+              linear.push({ ...les, module_title: mod.title });
+            });
           });
-        });
+        }
         setAllLessons(linear);
 
         // Determine Initial / Resumed Lesson
@@ -212,6 +242,366 @@ const CoursePlayer = () => {
       }
     };
   }, [hasStartedViewingMaterial, activeLesson?.id]);
+
+  // --------------------------------------------------------------------------
+  // In-Page Certification Examination Proctoring & Tab Switch Lockdown
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isQuizActive || !quizAttemptData || quizResult) return;
+
+    const handleTabViolation = () => {
+      if (isSubmittingQuizRef.current || !isQuizActive || !quizAttemptData || quizResult) return;
+
+      const now = Date.now();
+      // Debounce rapid multi-events firing simultaneously within 2000ms
+      if (now - lastViolationTimeRef.current < 2000) return;
+      lastViolationTimeRef.current = now;
+
+      tabViolationsRef.current += 1;
+      const count = tabViolationsRef.current;
+      setTabViolations(count);
+
+      if (count === 1) {
+        // Attempt 1: Warn the user that tab switching is prohibited
+        showAlert({
+          title: 'Proctoring Warning: Tab Switch Prohibited',
+          message: 'You are not allowed to switch tabs or leave the examination window during the test. If you attempt to switch tabs a second time, the test will be immediately closed and submitted.',
+          type: 'warning',
+        });
+      } else if (count >= 2) {
+        // Attempt 2: Test is immediately closed and submitted
+        showAlert({
+          title: 'Examination Terminated: Tab Switch Violation',
+          message: 'You attempted to switch tabs a second time. In accordance with examination rules, your test has been closed and automatically submitted.',
+          type: 'error',
+        });
+
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+
+        executeQuizSubmission(true, count);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        handleTabViolation();
+      }
+    };
+
+    const onWindowBlur = () => {
+      handleTabViolation();
+    };
+
+    const onFullscreenChange = () => {
+      // If user exits fullscreen while exam is active and not submitted
+      if (!document.fullscreenElement && isQuizActive && !quizResult && !isSubmittingQuizRef.current) {
+        handleTabViolation();
+      }
+    };
+
+    const onBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('blur', onWindowBlur);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onWindowBlur);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+    };
+  }, [isQuizActive, quizAttemptData, quizResult]);
+
+  // Content Copy & Tab-Switching Keyboard Prevention Listener
+  useEffect(() => {
+    if (!isQuizActive || !quizAttemptData || quizResult) return;
+
+    const handleKeyDown = (e) => {
+      const key = e.key.toLowerCase();
+
+      // Block tab switching hotkeys (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+PageUp, Ctrl+PageDown)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'Tab' || e.key === 'PageUp' || e.key === 'PageDown')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block new tab (Ctrl+T), new window (Ctrl+N), close tab (Ctrl+W)
+      if ((e.ctrlKey || e.metaKey) && ['t', 'n', 'w'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block browser reload (F5, Ctrl+R)
+      if (e.key === 'F5' || ((e.ctrlKey || e.metaKey) && key === 'r')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block Escape and F11 to preserve locked fullscreen examination
+      if (e.key === 'F11' || e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block browser history traversal (Alt+Left, Alt+Right)
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block copy, cut, paste, save, print, view-source, select-all shortcuts
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'u', 'p', 's', 'a'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        showAlert({
+          title: 'Action Prohibited',
+          message: 'Copying, pasting, saving, printing, or inspecting examination content is disabled by exam security policy.',
+          type: 'warning',
+        });
+        return false;
+      }
+
+      // Block F12 and DevTools shortcuts
+      if (
+        e.key === 'F12' ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c'].includes(key))
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        showAlert({
+          title: 'Action Prohibited',
+          message: 'Developer inspection tools are strictly disabled during the examination.',
+          type: 'warning',
+        });
+        return false;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isQuizActive, quizAttemptData, quizResult]);
+
+  // Examination Countdown Clock Effect
+  useEffect(() => {
+    if (quizTimerRef.current) {
+      clearInterval(quizTimerRef.current);
+      quizTimerRef.current = null;
+    }
+
+    if (!isQuizActive || !quizAttemptData || quizResult || quizTimeLeft <= 0) return;
+
+    quizTimerRef.current = setInterval(() => {
+      setQuizTimeLeft((prev) => {
+        if (prev <= 1) {
+          if (quizTimerRef.current) {
+            clearInterval(quizTimerRef.current);
+            quizTimerRef.current = null;
+          }
+          showAlert({
+            title: 'Time Expired',
+            message: 'Examination time has expired! Your responses are being submitted automatically.',
+            type: 'warning',
+          });
+          executeQuizSubmission(true, tabViolationsRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (quizTimerRef.current) {
+        clearInterval(quizTimerRef.current);
+        quizTimerRef.current = null;
+      }
+    };
+  }, [isQuizActive, quizAttemptData, quizResult, quizTimeLeft]);
+
+  // Examination Launch & Submission Handlers
+  const handleStartInPageExam = async () => {
+    if (!courseAssessment) return;
+    if (currentProgressPercent < 100) {
+      showAlert({
+        title: 'Examination Locked',
+        message: 'Prerequisite Required: You must complete 100% of the course curriculum before taking the certification examination.',
+        type: 'warning',
+      });
+      return;
+    }
+    try {
+      setQuizLoading(true);
+      setQuizError('');
+      setIsQuizActive(true);
+      setShowMobileSyllabus(false);
+
+      // Enter fullscreen lockdown mode to conceal browser tabs and UI chrome
+      if (document.documentElement.requestFullscreen) {
+        try {
+          await document.documentElement.requestFullscreen();
+        } catch (fsErr) {
+          console.warn('Fullscreen request bypassed or prohibited by client:', fsErr);
+        }
+      }
+
+      const res = await assessmentService.startAttempt(courseAssessment.id);
+      if (res.status === 'success') {
+        const data = res.data;
+        setQuizAttemptData(data);
+        const fetchedQuestions = data.assessment?.questions || [];
+        setQuizQuestions(fetchedQuestions);
+        setQuizTimeLeft(data.remaining_seconds || (courseAssessment.time_limit_minutes * 60) || 1800);
+        setQuizCurrentIdx(0);
+        setQuizAnswers({});
+        setUnansweredHighlighted(false);
+        tabViolationsRef.current = 0;
+        setTabViolations(0);
+        isSubmittingQuizRef.current = false;
+      } else {
+        throw new Error(res.message || 'Failed to start examination');
+      }
+    } catch (err) {
+      console.error('Failed to start in-page exam:', err);
+      setQuizError(err.response?.data?.message || err.message || 'Error starting examination session');
+      showAlert({
+        title: 'Unable to Start Exam',
+        message: err.response?.data?.message || err.message || 'Error initializing examination session.',
+        type: 'error',
+      });
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  const handleViewInPageExamScorecard = async () => {
+    if (!courseAssessment?.last_attempt_id) {
+      navigate('/learner/assessments');
+      return;
+    }
+    try {
+      setQuizLoading(true);
+      setQuizError('');
+      setIsQuizActive(true);
+      setShowMobileSyllabus(false);
+
+      const res = await assessmentService.getAttemptResult(courseAssessment.last_attempt_id);
+      if (res.status === 'success') {
+        setQuizResult(res.data);
+      } else {
+        throw new Error(res.message || 'Failed to fetch scorecard');
+      }
+    } catch (err) {
+      console.error('Failed to load scorecard:', err);
+      showAlert({
+        title: 'Scorecard Notice',
+        message: err.response?.data?.message || err.message || 'Unable to load examination scorecard.',
+        type: 'error',
+      });
+    } finally {
+      setQuizLoading(false);
+    }
+  };
+
+  const executeQuizSubmission = async (isForced = false, violationsCount = 0) => {
+    if (!quizAttemptData || isSubmittingQuizRef.current) return;
+    try {
+      isSubmittingQuizRef.current = true;
+      setQuizSubmitting(true);
+
+      // Release fullscreen lockdown on examination completion
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+
+      const answersArray = Object.entries(quizAnswers).map(([qId, oId]) => ({
+        question_id: parseInt(qId, 10),
+        selected_option_id: parseInt(oId, 10),
+      }));
+
+      const res = await assessmentService.submitAttempt(
+        quizAttemptData.attempt_id,
+        answersArray,
+        violationsCount || tabViolationsRef.current
+      );
+
+      if (res.status === 'success') {
+        setQuizResult(res.data);
+        const progRes = await progressService.getCourseProgress(courseId);
+        if (progRes.status === 'success') {
+          setProgressData(progRes.data);
+        }
+        const courseRes = await courseService.getCourse(courseId);
+        if (courseRes.status === 'success') {
+          setCourse(courseRes.data);
+        }
+      } else {
+        throw new Error(res.message || 'Error submitting examination');
+      }
+    } catch (err) {
+      console.error('Quiz submission error:', err);
+      showAlert({
+        title: 'Submission Error',
+        message: err.response?.data?.message || err.message || 'An error occurred while evaluating your examination.',
+        type: 'error',
+      });
+    } finally {
+      isSubmittingQuizRef.current = false;
+      setQuizSubmitting(false);
+    }
+  };
+
+  const handleQuizSubmitClick = async () => {
+    if (!quizAttemptData || quizSubmitting) return;
+
+    const answeredCount = Object.keys(quizAnswers).length;
+    const totalQuestions = quizQuestions.length;
+
+    // Strict Mandatory Question Rule: Every question must have an answer
+    if (answeredCount < totalQuestions) {
+      setUnansweredHighlighted(true);
+      const firstUnansweredIdx = quizQuestions.findIndex(
+        (q) => quizAnswers[q.id] === undefined
+      );
+      if (firstUnansweredIdx !== -1) {
+        setQuizCurrentIdx(firstUnansweredIdx);
+      }
+      showAlert({
+        title: 'All Questions Are Mandatory',
+        message: `You have answered ${answeredCount} of ${totalQuestions} questions. Every question in this certification examination is mandatory. Please answer question ${firstUnansweredIdx + 1} and all remaining questions before submitting.`,
+        type: 'warning',
+      });
+      return;
+    }
+
+    const confirmed = await showConfirm({
+      title: 'Confirm Examination Submission',
+      message: `You have answered all ${totalQuestions} mandatory questions. Once submitted, your examination responses will be audited and cannot be modified. Proceed with final submission?`,
+      confirmText: 'Submit Examination',
+      type: 'confirm',
+    });
+
+    if (confirmed) {
+      executeQuizSubmission(false, tabViolationsRef.current);
+    }
+  };
+
+  const formatQuizTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const currentLessonIndex = allLessons.findIndex((l) => l.id === activeLesson?.id);
   const isLessonCompleted = activeLesson ? progressData.progress_map?.[activeLesson.id]?.is_completed === 1 : false;
@@ -420,7 +810,16 @@ const CoursePlayer = () => {
     }
   };
 
-  const handleSelectLesson = (lesson, index) => {
+  const handleSelectLesson = async (lesson, index) => {
+    if (isQuizActive && quizAttemptData && !quizResult) {
+      const confirmLeave = await showConfirm({
+        title: 'Active Examination in Progress',
+        message: 'You have an active examination session in progress. Navigating away will leave your exam session. Do you wish to return to this lesson unit?',
+        confirmText: 'Leave Examination',
+        type: 'confirm',
+      });
+      if (!confirmLeave) return;
+    }
     if (!isLessonUnlocked(index)) {
       showAlert({
         title: 'Prerequisite Required',
@@ -429,6 +828,7 @@ const CoursePlayer = () => {
       });
       return;
     }
+    setIsQuizActive(false);
     setActiveLesson(lesson);
     setShowMobileSyllabus(false);
   };
@@ -487,18 +887,12 @@ const CoursePlayer = () => {
               Exam Locked (Complete Course)
             </Button>
           ) : courseAssessment ? (
-            courseAssessment.attempts_taken > 0 ? (
+            courseAssessment.attempts_taken > 0 || quizResult ? (
               <Button
                 variant="outline"
                 size="sm"
                 icon={CheckCircle}
-                onClick={() => {
-                  if (courseAssessment.last_attempt_id) {
-                    navigate(`/learner/assessment-attempts/${courseAssessment.last_attempt_id}/result`);
-                  } else {
-                    navigate('/learner/assessments');
-                  }
-                }}
+                onClick={handleViewInPageExamScorecard}
               >
                 View Exam Scorecard
               </Button>
@@ -507,7 +901,7 @@ const CoursePlayer = () => {
                 variant="navy"
                 size="sm"
                 icon={Award}
-                onClick={() => navigate(`/learner/assessments/${courseAssessment.id}/take`)}
+                onClick={handleStartInPageExam}
               >
                 Take Certification Exam
               </Button>
@@ -568,13 +962,7 @@ const CoursePlayer = () => {
               variant="outline"
               size="sm"
               icon={CheckCircle}
-              onClick={() => {
-                if (courseAssessment.last_attempt_id) {
-                  navigate(`/learner/assessment-attempts/${courseAssessment.last_attempt_id}/result`);
-                } else {
-                  navigate('/learner/assessments');
-                }
-              }}
+              onClick={handleViewInPageExamScorecard}
               className="shrink-0"
             >
               View Exam Scorecard
@@ -591,7 +979,7 @@ const CoursePlayer = () => {
                   Curriculum Completed - Certification Exam Unlocked
                 </h3>
                 <p className="text-xs text-[#475569] mt-0.5">
-                  You have fulfilled all module requirements. Proceed to your single-attempt certification examination ({courseAssessment.time_limit_minutes} minutes, {courseAssessment.passing_percentage}% pass benchmark).
+                  You have fulfilled all curriculum requirements. Proceed to your single-attempt certification examination ({courseAssessment.time_limit_minutes} minutes, {courseAssessment.passing_percentage}% pass benchmark).
                 </p>
               </div>
             </div>
@@ -599,7 +987,7 @@ const CoursePlayer = () => {
               variant="navy"
               size="md"
               icon={Award}
-              onClick={() => navigate(`/learner/assessments/${courseAssessment.id}/take`)}
+              onClick={handleStartInPageExam}
               className="shrink-0 shadow-sm"
             >
               Launch Certification Exam
@@ -610,7 +998,7 @@ const CoursePlayer = () => {
 
       {loading ? (
         <div className="p-12 text-center text-xs font-semibold text-[#64748B] clay-card rounded-2xl border border-white/60">
-          Loading learning module...
+          Loading course curriculum...
         </div>
       ) : !course ? (
         <div className="p-12 text-center clay-card rounded-2xl border border-white/60">
@@ -650,59 +1038,521 @@ const CoursePlayer = () => {
               <BookOpen className="w-3.5 h-3.5 text-[#2C51A2]" />
             </div>
 
-            {/* Modules & Lessons Hierarchy List */}
-            <div className="divide-y divide-[#E2E8F0]/60 max-h-[600px] overflow-y-auto touch-scroll">
-              {(course.modules || []).map((mod, modIdx) => (
-                <div key={mod.id} className="p-2.5">
-                  <div className="text-[10px] font-extrabold uppercase tracking-wider text-[#64748B] px-2 py-1">
-                    Module {mod.order_index || modIdx + 1}: {mod.title}
-                  </div>
-                  <div className="space-y-1 mt-1">
-                    {(mod.lessons || []).map((lesson) => {
-                      const isComplete = progressData.progress_map?.[lesson.id]?.is_completed === 1;
-                      const isActive = activeLesson?.id === lesson.id;
-                      const lessonGlobalIdx = allLessons.findIndex((l) => l.id === lesson.id);
-                      const isUnlocked = isLessonUnlocked(lessonGlobalIdx);
-                      const isLocked = !isUnlocked;
+            {/* Direct Curriculum Lessons List */}
+            <div className="divide-y divide-[#E2E8F0]/60 max-h-[600px] overflow-y-auto touch-scroll p-2.5 space-y-1">
+              {allLessons.map((lesson, lessonGlobalIdx) => {
+                const isComplete = progressData.progress_map?.[lesson.id]?.is_completed === 1;
+                const isActive = activeLesson?.id === lesson.id && !isQuizActive;
+                const isUnlocked = isLessonUnlocked(lessonGlobalIdx);
+                const isLocked = !isUnlocked;
 
-                      return (
-                        <button
-                          key={lesson.id}
-                          onClick={() => handleSelectLesson(lesson, lessonGlobalIdx)}
-                          className={`w-full text-left p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
-                            isActive
-                              ? 'bg-[#E2E9F4] text-[#1E3B78] font-bold shadow-inner'
-                              : isLocked
-                              ? 'text-[#94A3B8] bg-[#F8FAFC]/50 cursor-not-allowed opacity-75'
-                              : 'text-[#172B4D] hover:bg-[#F3F6FB] font-medium'
-                          }`}
-                          title={isLocked ? 'Prerequisite Required: Complete previous lessons in sequence to unlock' : lesson.title}
-                        >
-                          <div className="flex items-center gap-2 truncate pr-2">
-                            {isComplete ? (
-                              <CheckCircle className="w-4 h-4 shrink-0 text-[#2C51A2]" />
-                            ) : isLocked ? (
-                              <Lock className="w-3.5 h-3.5 shrink-0 text-[#94A3B8]" />
-                            ) : (
-                              <Circle className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#2C51A2]' : 'text-[#94A3B8]'}`} />
-                            )}
-                            <span className="truncate">{lesson.title}</span>
-                          </div>
-                          <span className={`text-[10px] shrink-0 font-medium ${isActive ? 'text-[#1E3B78] font-bold' : 'text-[#64748B]'}`}>
-                            {lesson.duration_minutes}m
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+                return (
+                  <button
+                    key={lesson.id}
+                    onClick={() => handleSelectLesson(lesson, lessonGlobalIdx)}
+                    className={`w-full text-left p-2.5 rounded-xl flex items-center justify-between text-xs transition-all ${
+                      isActive
+                        ? 'bg-[#E2E9F4] text-[#1E3B78] font-bold shadow-inner'
+                        : isLocked
+                        ? 'text-[#94A3B8] bg-[#F8FAFC]/50 cursor-not-allowed opacity-75'
+                        : 'text-[#172B4D] hover:bg-[#F3F6FB] font-medium'
+                    }`}
+                    title={isLocked ? 'Prerequisite Required: Complete previous lessons in sequence to unlock' : lesson.title}
+                  >
+                    <div className="flex items-center gap-2 truncate pr-2">
+                      <span className="text-[10px] font-mono font-bold text-[#64748B] w-4 shrink-0">
+                        {lessonGlobalIdx + 1}.
+                      </span>
+                      {isComplete ? (
+                        <CheckCircle className="w-4 h-4 shrink-0 text-[#2C51A2]" />
+                      ) : isLocked ? (
+                        <Lock className="w-3.5 h-3.5 shrink-0 text-[#94A3B8]" />
+                      ) : (
+                        <Circle className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#2C51A2]' : 'text-[#94A3B8]'}`} />
+                      )}
+                      <span className="truncate">{lesson.title}</span>
+                    </div>
+                    <span className={`text-[10px] shrink-0 font-medium ${isActive ? 'text-[#1E3B78] font-bold' : 'text-[#64748B]'}`}>
+                      {lesson.duration_minutes}m
+                    </span>
+                  </button>
+                );
+              })}
             </div>
+
+            {/* Final Certification Examination Milestone in Syllabus */}
+            {course?.course_type !== 'non_certified' && courseAssessment && (
+              <div className="p-2.5 pt-3 border-t border-[#E2E8F0]/60">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (currentProgressPercent < 100) {
+                      showAlert({
+                        title: 'Certification Examination Locked',
+                        message: 'Prerequisite Required: Complete 100% of the course curriculum lessons and study materials to unlock the certification examination.',
+                        type: 'warning',
+                      });
+                      return;
+                    }
+                    if (courseAssessment.attempts_taken > 0 || quizResult) {
+                      handleViewInPageExamScorecard();
+                    } else {
+                      handleStartInPageExam();
+                    }
+                  }}
+                  className={`w-full text-left p-2.5 rounded-xl flex items-center justify-between text-xs transition-all cursor-pointer ${
+                    isQuizActive
+                      ? 'bg-[#1E3B78] text-white font-bold shadow-md'
+                      : currentProgressPercent < 100
+                      ? 'text-[#94A3B8] bg-[#F8FAFC]/50 cursor-not-allowed opacity-75'
+                      : 'bg-[#EFF6FF] text-[#1E3B78] hover:bg-[#DBEAFE] font-bold border border-[#BFDBFE]'
+                  }`}
+                  title={
+                    currentProgressPercent < 100
+                      ? 'Prerequisite Required: Complete 100% of curriculum to unlock'
+                      : 'Final Certification Examination'
+                  }
+                >
+                  <div className="flex items-center gap-2 truncate pr-2">
+                    {courseAssessment.attempts_taken > 0 || quizResult ? (
+                      <CheckCircle className={`w-4 h-4 shrink-0 ${isQuizActive ? 'text-white' : 'text-[#2C51A2]'}`} />
+                    ) : currentProgressPercent < 100 ? (
+                      <Lock className="w-3.5 h-3.5 shrink-0 text-[#94A3B8]" />
+                    ) : (
+                      <Award className={`w-4 h-4 shrink-0 ${isQuizActive ? 'text-white' : 'text-[#2C51A2]'}`} />
+                    )}
+                    <span className="truncate">Certification Examination</span>
+                  </div>
+                  <span
+                    className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                      isQuizActive
+                        ? 'bg-white text-[#1E3B78]'
+                        : currentProgressPercent < 100
+                        ? 'bg-[#E2E9F4] text-[#64748B]'
+                        : courseAssessment.attempts_taken > 0 || quizResult
+                        ? 'bg-[#E2E9F4] text-[#1E3B78]'
+                        : 'bg-[#2C51A2] text-white'
+                    }`}
+                  >
+                    {courseAssessment.attempts_taken > 0 || quizResult
+                      ? 'Completed'
+                      : currentProgressPercent < 100
+                      ? 'Locked'
+                      : 'Unlocked'}
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* RIGHT MAIN LEARNING STAGE (3 Cols) */}
           <div className="lg:col-span-3 space-y-6">
-            {!activeLesson ? (
+            {isQuizActive ? (
+              <div className="space-y-6">
+                {quizLoading ? (
+                  <div className="clay-card p-12 rounded-2xl border border-white/60 text-center">
+                    <Clock className="w-8 h-8 text-[#2C51A2] animate-spin mx-auto mb-3" />
+                    <h3 className="text-sm font-bold text-[#1E3B78] uppercase tracking-wide">
+                      Initializing Secure Examination Environment
+                    </h3>
+                    <p className="text-xs text-[#64748B] mt-1">
+                      Generating randomized questions and options for this certification session...
+                    </p>
+                  </div>
+                ) : quizResult ? (
+                  /* IN-PAGE SCORECARD VIEW */
+                  <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
+                      <div>
+                        <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
+                          Examination Scorecard
+                        </span>
+                        <h2 className="text-xl font-bold text-[#1E3B78] mt-1">
+                          {courseAssessment?.title || 'Certification Examination Result'}
+                        </h2>
+                        <p className="text-xs text-[#64748B] mt-0.5">
+                          Official performance audit for {course.title}
+                        </p>
+                      </div>
+                      <Badge
+                        variant={quizResult.is_passed ? 'success' : 'danger'}
+                        size="md"
+                      >
+                        {quizResult.is_passed ? 'PASSED & CERTIFIED' : 'BENCHMARK NOT MET'}
+                      </Badge>
+                    </div>
+
+                    {/* Outcome Banner */}
+                    <div
+                      className={`p-5 rounded-2xl border ${
+                        quizResult.is_passed
+                          ? 'bg-[#F0FDF4] border-[#86EFAC] text-[#166534]'
+                          : 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]'
+                      } flex items-start gap-4`}
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white shadow-xs flex items-center justify-center shrink-0 mt-0.5">
+                        {quizResult.is_passed ? (
+                          <CheckCircle className="w-6 h-6 text-[#16A34A]" />
+                        ) : (
+                          <XCircle className="w-6 h-6 text-[#DC2626]" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold uppercase tracking-wider">
+                          {quizResult.is_passed
+                            ? 'Congratulations! Examination Successfully Passed'
+                            : 'Certification Benchmark Not Achieved'}
+                        </h3>
+                        <p className="text-xs mt-1 leading-relaxed opacity-90">
+                          {quizResult.is_passed
+                            ? `You achieved ${quizResult.percentage}%, satisfying the ${quizResult.passing_percentage}% benchmark. Your official credential has been registered.`
+                            : `You achieved ${quizResult.percentage}%, which is below the mandatory ${quizResult.passing_percentage}% passing benchmark.`}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Score Metrics Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Score Percentage</div>
+                        <div className={`text-xl font-mono font-bold mt-1 ${quizResult.is_passed ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
+                          {quizResult.percentage}%
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Passing Benchmark</div>
+                        <div className="text-xl font-mono font-bold text-[#1E3B78] mt-1">
+                          {quizResult.passing_percentage}%
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Points Awarded</div>
+                        <div className="text-xl font-mono font-bold text-[#1E3B78] mt-1">
+                          {quizResult.total_score} / {quizResult.max_score}
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Proctoring Audit</div>
+                        <div className={`text-sm font-mono font-bold mt-1 ${quizResult.tab_switch_count >= 2 ? 'text-[#DC2626]' : quizResult.tab_switch_count === 1 ? 'text-[#D97706]' : 'text-[#16A34A]'}`}>
+                          {quizResult.tab_switch_count >= 2
+                            ? 'Closed on 2nd Tab Switch'
+                            : quizResult.tab_switch_count === 1
+                            ? '1 Warning Issued'
+                            : 'Verified Secure'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#E2E8F0]">
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        icon={BookOpen}
+                        onClick={() => setIsQuizActive(false)}
+                      >
+                        Return to Course Curriculum
+                      </Button>
+
+                      <div className="flex items-center gap-2">
+                        {quizResult.is_passed && (
+                          <Button
+                            variant="primary"
+                            size="md"
+                            icon={Award}
+                            onClick={() => navigate('/learner/certificates')}
+                          >
+                            View Official Certificate
+                          </Button>
+                        )}
+                        {quizResult.attempt_id && (
+                          <Button
+                            variant="outline"
+                            size="md"
+                            icon={FileCheck}
+                            onClick={() => navigate(`/learner/assessment-attempts/${quizResult.attempt_id}/result`)}
+                          >
+                            Detailed Question Breakdown
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : !quizAttemptData ? (
+                  <div className="clay-card p-8 rounded-2xl border border-white/60 text-center space-y-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#E2E9F4] text-[#1E3B78] flex items-center justify-center mx-auto">
+                      <Award className="w-6 h-6 text-[#2C51A2]" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-[#172B4D]">
+                        {courseAssessment?.title || 'Final Certification Examination'}
+                      </h3>
+                      <p className="text-xs text-[#64748B] mt-1 max-w-md mx-auto">
+                        This is a single-attempt, timed examination. Questions and options are randomized per learner. Tab switching and content copying are strictly prohibited.
+                      </p>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="md"
+                      icon={Award}
+                      onClick={handleStartInPageExam}
+                    >
+                      Begin Examination Now
+                    </Button>
+                  </div>
+                ) : (
+                  /* ACTIVE IN-PAGE SECURE QUIZ RUNNER */
+                  <div
+                    onCopy={(e) => {
+                      e.preventDefault();
+                      showAlert({
+                        title: 'Action Prohibited',
+                        message: 'Copying examination questions and options is strictly disabled by exam security policy.',
+                        type: 'warning',
+                      });
+                    }}
+                    onCut={(e) => e.preventDefault()}
+                    onPaste={(e) => e.preventDefault()}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="select-none space-y-6"
+                  >
+                    {/* Top Examination Control Bar */}
+                    <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
+                            Attempt #{quizAttemptData.attempt_number || 1}
+                          </span>
+                          <span className="text-[10px] font-mono text-[#64748B]">
+                            {quizQuestions.length} Questions (All Mandatory)
+                          </span>
+                          {tabViolations === 1 ? (
+                            <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#FEF3C7] text-[#92400E] px-2.5 py-0.5 rounded-full border border-[#FDE68A]">
+                              1 Tab Switch Warning (Attempt 2 Closes Test)
+                            </span>
+                          ) : (
+                            <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#E2E9F4] text-[#1E3B78] px-2.5 py-0.5 rounded-full border border-[#CBD5E1]">
+                              Fullscreen Lockdown Active
+                            </span>
+                          )}
+                        </div>
+                        <h2 className="text-lg font-bold text-[#1E3B78] mt-1">
+                          {quizAttemptData.assessment?.title || 'Certification Examination'}
+                        </h2>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {/* Countdown Clock */}
+                        <div
+                          className={`flex items-center gap-2 px-3.5 py-2 border rounded-xl font-mono font-bold text-sm shadow-inner ${
+                            quizTimeLeft < 120
+                              ? 'bg-[#FEE2E2] border-[#DC2626] text-[#DC2626] animate-pulse'
+                              : 'bg-white border-[#CBD5E1] text-[#1E3B78]'
+                          }`}
+                        >
+                          <Clock className={`w-4 h-4 ${quizTimeLeft < 120 ? 'text-[#DC2626]' : 'text-[#2C51A2]'}`} />
+                          <span>{formatQuizTime(quizTimeLeft)}</span>
+                        </div>
+
+                        <Button
+                          variant="navy"
+                          size="md"
+                          icon={Send}
+                          loading={quizSubmitting}
+                          onClick={handleQuizSubmitClick}
+                        >
+                          Submit Exam ({Object.keys(quizAnswers).length}/{quizQuestions.length})
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Examination Body: 4-Column Grid */}
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+                      {/* Left 1 Col: Question Navigator Palette */}
+                      <div className="lg:col-span-1 space-y-4">
+                        <Card title="Question Palette">
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-5 gap-2">
+                              {quizQuestions.map((q, idx) => {
+                                const isAnswered = quizAnswers[q.id] !== undefined;
+                                const isCurrent = idx === quizCurrentIdx;
+                                const isMissing = unansweredHighlighted && !isAnswered;
+
+                                let btnStyle = 'bg-white border border-[#CBD5E1] text-[#172B4D] hover:bg-[#F8FAFC]';
+                                if (isCurrent) {
+                                  btnStyle = 'bg-[#1E3B78] text-white font-bold shadow-md border-[#1E3B78]';
+                                } else if (isAnswered) {
+                                  btnStyle = 'bg-[#E2E9F4] border border-[#BFDBFE] text-[#1E3B78] font-bold shadow-xs';
+                                } else if (isMissing) {
+                                  btnStyle = 'bg-[#FEE2E2] border-2 border-[#DC2626] text-[#DC2626] font-bold animate-pulse';
+                                }
+
+                                return (
+                                  <button
+                                    key={q.id}
+                                    type="button"
+                                    onClick={() => setQuizCurrentIdx(idx)}
+                                    className={`h-9 text-xs font-bold rounded-xl transition-all flex items-center justify-center cursor-pointer ${btnStyle}`}
+                                    title={`Go to Question ${idx + 1}${!isAnswered ? ' (Unanswered)' : ' (Answered)'}`}
+                                  >
+                                    {idx + 1}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Status Legend */}
+                            <div className="pt-3 border-t border-[#E2E8F0] space-y-1.5 text-[11px] text-[#64748B]">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3.5 h-3.5 bg-[#E2E9F4] border border-[#BFDBFE] rounded-md" />
+                                <span>Answered ({Object.keys(quizAnswers).length})</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3.5 h-3.5 bg-white border border-[#CBD5E1] rounded-md" />
+                                <span>Unanswered ({quizQuestions.length - Object.keys(quizAnswers).length})</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="w-3.5 h-3.5 bg-[#1E3B78] rounded-md" />
+                                <span>Current Question</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+
+                        <div className="clay-card p-4 rounded-2xl border border-white/60 text-xs text-[#64748B] space-y-2">
+                          <p className="font-bold text-[#1E3B78] uppercase tracking-wider text-[11px]">
+                            Examination Integrity Rules
+                          </p>
+                          <p className="leading-relaxed">
+                            1. All questions are mandatory. You cannot submit until every question is answered.
+                          </p>
+                          <p className="leading-relaxed">
+                            2. Questions and options are randomized for each learner.
+                          </p>
+                          <p className="leading-relaxed">
+                            3. Tab switching is strictly prohibited. If you attempt to switch tabs, you will receive a warning that you are not allowed to switch tabs. If you attempt a second time, the test will be immediately closed and submitted.
+                          </p>
+                          <p className="leading-relaxed">
+                            4. Content copying and right-clicking are prohibited.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right 3 Cols: Active Question Display */}
+                      <div className="lg:col-span-3">
+                        {quizQuestions[quizCurrentIdx] && (() => {
+                          const currentQ = quizQuestions[quizCurrentIdx];
+                          const isAnswered = quizAnswers[currentQ.id] !== undefined;
+
+                          return (
+                            <div className="clay-card p-6 sm:p-7 rounded-2xl border border-white/60 space-y-5">
+                              {/* Question Header */}
+                              <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+                                <div className="flex items-center gap-2">
+                                  <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
+                                    Question {quizCurrentIdx + 1} of {quizQuestions.length}
+                                  </span>
+                                  <Badge variant="warning" size="sm">
+                                    Mandatory
+                                  </Badge>
+                                </div>
+                                <span className="text-xs font-mono font-bold text-[#2C51A2]">
+                                  {currentQ.marks} Point{currentQ.marks > 1 ? 's' : ''}
+                                </span>
+                              </div>
+
+                              {/* Question Prompt */}
+                              <div className="text-sm sm:text-base font-bold text-[#172B4D] leading-relaxed">
+                                {currentQ.question_text}
+                              </div>
+
+                              {/* Options List (Shuffled for Learner) */}
+                              <div className="space-y-2.5 pt-2">
+                                {(currentQ.options || []).map((opt, optIdx) => {
+                                  const isSelected = quizAnswers[currentQ.id] === opt.id;
+
+                                  return (
+                                    <div
+                                      key={opt.id}
+                                      onClick={() => {
+                                        setQuizAnswers((prev) => ({
+                                          ...prev,
+                                          [currentQ.id]: opt.id,
+                                        }));
+                                      }}
+                                      className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3.5 cursor-pointer ${
+                                        isSelected
+                                          ? 'border-[#2C51A2] bg-[#EFF6FF] shadow-xs'
+                                          : 'border-[#CBD5E1] bg-white hover:border-[#2C51A2]/60 hover:bg-[#FAFBFD]'
+                                      }`}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`in_page_q_${currentQ.id}`}
+                                        checked={isSelected}
+                                        onChange={() => {
+                                          setQuizAnswers((prev) => ({
+                                            ...prev,
+                                            [currentQ.id]: opt.id,
+                                          }));
+                                        }}
+                                        className="w-4 h-4 text-[#2C51A2] focus:ring-0 cursor-pointer"
+                                      />
+                                      <div className="flex items-center gap-2.5 text-xs sm:text-sm text-[#172B4D] font-medium select-none">
+                                        <span className="w-5 h-5 rounded-full bg-[#E2E9F4] text-[#1E3B78] font-bold text-[10px] flex items-center justify-center shrink-0">
+                                          {String.fromCharCode(65 + optIdx)}
+                                        </span>
+                                        <span>{opt.option_text}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Question Bottom Navigation Controls */}
+                              <div className="flex items-center justify-between pt-4 border-t border-[#E2E8F0]">
+                                <Button
+                                  variant="secondary"
+                                  size="md"
+                                  icon={ChevronLeft}
+                                  disabled={quizCurrentIdx === 0}
+                                  onClick={() => setQuizCurrentIdx((prev) => Math.max(0, prev - 1))}
+                                >
+                                  Previous Question
+                                </Button>
+
+                                <div className="flex items-center gap-2">
+                                  {quizCurrentIdx < quizQuestions.length - 1 ? (
+                                    <Button
+                                      variant="primary"
+                                      size="md"
+                                      icon={ChevronRight}
+                                      onClick={() => setQuizCurrentIdx((prev) => Math.min(quizQuestions.length - 1, prev + 1))}
+                                    >
+                                      Next Question
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      variant="navy"
+                                      size="md"
+                                      icon={Send}
+                                      loading={quizSubmitting}
+                                      onClick={handleQuizSubmitClick}
+                                    >
+                                      Submit Examination
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : !activeLesson ? (
               <div className="p-12 text-center clay-card rounded-2xl border border-white/60">
                 Please select a lesson from the syllabus.
               </div>
@@ -712,7 +1562,7 @@ const CoursePlayer = () => {
                 <div className="p-6 border-b border-[#E2E8F0]/60 bg-[#F3F6FB]/80">
                   <div className="flex flex-wrap items-center gap-2 mb-2.5">
                     <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
-                      {activeLesson.module_title}
+                      Lesson {allLessons.findIndex((l) => l.id === activeLesson.id) + 1} of {allLessons.length}
                     </span>
                     <Badge variant="default" size="sm">
                       {activeLesson.lesson_type}
@@ -891,7 +1741,7 @@ const CoursePlayer = () => {
                                   </a>
                                 ) : (
                                   <a
-                                    href={`/LMS/backend/${mat.file_path}`}
+                                    href={`/api/materials/${mat.id}/download`}
                                     target="_blank"
                                     rel="noreferrer"
                                     download
@@ -926,17 +1776,18 @@ const CoursePlayer = () => {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <a
-                                href={`/LMS/backend/${previewMaterial.file_path}`}
+                                href={previewData?.download_url || `/api/materials/${previewMaterial.id}/download`}
                                 target="_blank"
                                 rel="noreferrer"
                                 download
-                                className="px-3 py-1 clay-pill bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-white hover:text-[#1E3B78] transition-colors"
+                                className="px-3 py-1 clay-pill bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider rounded-full hover:bg-white hover:text-[#1E3B78] transition-colors inline-flex items-center gap-1"
                               >
-                                Download Copy
+                                <FileDown className="w-3 h-3" />
+                                <span>Download Copy</span>
                               </a>
                               <button
                                 onClick={handleCloseViewer}
-                                className="p-1 hover:bg-white/20 text-white text-xs font-bold rounded-lg transition-colors"
+                                className="p-1 hover:bg-white/20 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
                                 title="Close Viewer"
                               >
                                 <X className="w-4 h-4" />
@@ -1038,20 +1889,36 @@ const CoursePlayer = () => {
                             ) : previewData?.preview_type === 'pdf' ? (
                               /* PDF EMBEDDED VIEWER */
                               <div className="space-y-3">
-                                <div className="text-xs font-bold uppercase tracking-wider text-[#1E3B78] pb-2 border-b border-[#E2E8F0]/60 flex items-center justify-between">
-                                  <span>Interactive PDF Document Reader</span>
-                                  <a
-                                    href={`${previewData.file_url}`}
-                                    download
-                                    className="text-[11px] font-bold text-[#2C51A2] hover:text-[#1E3B78] inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    <FileDown className="w-3.5 h-3.5" />
-                                    <span>Download PDF</span>
-                                  </a>
+                                <div className="text-xs font-bold uppercase tracking-wider text-[#1E3B78] pb-2 border-b border-[#E2E8F0]/60 flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
+                                      PDF Document
+                                    </span>
+                                    <span className="truncate max-w-sm sm:max-w-md">{previewMaterial.file_name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <a
+                                      href={previewData.file_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-[11px] font-bold text-[#1E3B78] hover:text-[#2C51A2] inline-flex items-center gap-1 transition-colors px-2.5 py-1 bg-white rounded-lg border border-[#CBD5E1]"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                      <span>Open in New Tab</span>
+                                    </a>
+                                    <a
+                                      href={previewData.download_url || `/api/materials/${previewMaterial.id}/download`}
+                                      download
+                                      className="text-[11px] font-bold text-[#2C51A2] hover:text-[#1E3B78] inline-flex items-center gap-1 transition-colors px-2.5 py-1 bg-white rounded-lg border border-[#CBD5E1]"
+                                    >
+                                      <FileDown className="w-3.5 h-3.5" />
+                                      <span>Download PDF</span>
+                                    </a>
+                                  </div>
                                 </div>
                                 <iframe
                                   src={`${previewData.file_url}#toolbar=1`}
-                                  className="w-full h-[580px] rounded-2xl border border-[#CBD5E1]/50 bg-white shadow-inner"
+                                  className="w-full h-[620px] rounded-xl border border-[#CBD5E1] bg-white shadow-inner"
                                   title={previewMaterial.file_name}
                                 />
                               </div>
@@ -1071,7 +1938,7 @@ const CoursePlayer = () => {
                                     <span className="font-semibold">{previewData.total_elements || 0} Content Units</span>
                                     <span>•</span>
                                     <a
-                                      href={`/LMS/backend/${previewMaterial.file_path}`}
+                                      href={previewData?.download_url || `/api/materials/${previewMaterial.id}/download`}
                                       download
                                       className="text-[#2C51A2] hover:text-[#1E3B78] font-bold inline-flex items-center gap-1 transition-colors"
                                     >
@@ -1201,7 +2068,7 @@ const CoursePlayer = () => {
                                     </span>
                                     <span>•</span>
                                     <a
-                                      href={`/LMS/backend/${previewMaterial.file_path}`}
+                                      href={previewData?.download_url || `/api/materials/${previewMaterial.id}/download`}
                                       download
                                       className="text-[#2C51A2] hover:text-[#1E3B78] font-bold inline-flex items-center gap-1 transition-colors"
                                     >
@@ -1359,10 +2226,28 @@ const CoursePlayer = () => {
                                     ref={videoRef}
                                     controls
                                     className="w-full max-h-[520px] rounded-xl mx-auto"
-                                    src={`/LMS/backend/${previewMaterial.file_path}`}
+                                    src={previewData?.file_url || `/api/materials/${previewMaterial.id}/stream`}
                                   >
                                     Your browser does not support HTML5 video playback.
                                   </video>
+                                </div>
+                              </div>
+                            ) : previewData?.preview_type === 'text' ? (
+                              /* TEXT / MARKDOWN PREVIEW */
+                              <div className="space-y-3">
+                                <div className="text-xs font-bold uppercase tracking-wider text-[#1E3B78] pb-2 border-b border-[#E2E8F0]/60 flex items-center justify-between">
+                                  <span>Text Reference Document</span>
+                                  <a
+                                    href={previewData?.download_url || `/api/materials/${previewMaterial.id}/download`}
+                                    download
+                                    className="text-[11px] font-bold text-[#2C51A2] hover:text-[#1E3B78] inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <FileDown className="w-3.5 h-3.5" />
+                                    <span>Download File</span>
+                                  </a>
+                                </div>
+                                <div className="p-4 sm:p-6 bg-white rounded-xl border border-[#CBD5E1] font-mono text-xs text-[#172B4D] overflow-x-auto whitespace-pre-wrap max-h-[520px] overflow-y-auto leading-relaxed">
+                                  {previewData.raw_content || 'No text content available.'}
                                 </div>
                               </div>
                             ) : (
@@ -1371,7 +2256,7 @@ const CoursePlayer = () => {
                                 {previewMaterial.file_name.match(/\.(png|jpg|jpeg|svg|webp)$/i) ? (
                                   <div className="text-center p-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm">
                                     <img
-                                      src={`/LMS/backend/${previewMaterial.file_path}`}
+                                      src={previewData?.file_url || `/api/materials/${previewMaterial.id}/stream`}
                                       alt={previewMaterial.file_name}
                                       className="max-h-[500px] mx-auto object-contain rounded-xl"
                                     />
@@ -1384,7 +2269,7 @@ const CoursePlayer = () => {
                                       {previewMaterial.file_name} is active. Use the download link to review on your computer.
                                     </p>
                                     <a
-                                      href={`/LMS/backend/${previewMaterial.file_path}`}
+                                      href={previewData?.download_url || `/api/materials/${previewMaterial.id}/download`}
                                       download
                                       className="px-4 py-2 clay-btn-primary text-white text-xs font-bold uppercase tracking-wider rounded-xl inline-flex items-center gap-1.5 transition-colors"
                                     >

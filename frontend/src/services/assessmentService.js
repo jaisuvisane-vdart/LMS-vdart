@@ -27,7 +27,7 @@ export const assessmentService = {
   // Learner methods
   getMyAssessments: () => api.get('/my-assessments'),
   startAttempt: (assessmentId) => api.post(`/assessments/${assessmentId}/start`),
-  submitAttempt: (attemptId, answers) => api.post(`/assessment-attempts/${attemptId}/submit`, { answers }),
+  submitAttempt: (attemptId, answers, tab_switch_count = 0) => api.post(`/assessment-attempts/${attemptId}/submit`, { answers, tab_switch_count }),
   getAttemptResult: (attemptId) => api.get(`/assessment-attempts/${attemptId}/result`),
 };
 

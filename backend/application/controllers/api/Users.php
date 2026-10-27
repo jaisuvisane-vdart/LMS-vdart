@@ -5,7 +5,7 @@ require_once APPPATH . 'core/API_Controller.php';
 
 /**
  * User Governance REST API Controller
- * Provides enterprise administrative capabilities for user provisioning, role assignments, and directory management
+ * Provides enterprise administrative capabilities for user creation, role assignments, and directory management
  */
 #[AllowDynamicProperties]
 class Users extends API_Controller {
@@ -59,7 +59,7 @@ class Users extends API_Controller {
 
     /**
      * POST /api/users
-     * Provision a new user account
+     * Create a new user account
      */
     public function create() {
         $this->require_role(['admin']);
@@ -86,14 +86,14 @@ class Users extends API_Controller {
         // Audit log
         $this->audit->log(
             $this->current_user['id'],
-            'USER_PROVISIONED',
+            'USER_CREATED',
             'users',
             $user_id,
             null,
             ['email' => $email, 'role_id' => $role_id, 'name' => "$first_name $last_name"]
         );
 
-        return $this->json_response($new_user, 'User account provisioned successfully.', 201);
+        return $this->json_response($new_user, 'User account created successfully.', 201);
     }
 
     /**

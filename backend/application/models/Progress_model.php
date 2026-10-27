@@ -35,11 +35,9 @@ class Progress_model extends CI_Model {
 
         if ($is_completed) {
             // 1. Enforce Sequential Progression: verify all prior lessons in course order are completed
-            $this->db->select('l.id, l.title, l.module_id, l.order_index, cm.order_index as module_order');
+            $this->db->select('l.id, l.title, l.order_index');
             $this->db->from('lessons l');
-            $this->db->join('course_modules cm', 'cm.id = l.module_id');
-            $this->db->where('cm.course_id', $course_id);
-            $this->db->order_by('cm.order_index', 'ASC');
+            $this->db->where('l.course_id', $course_id);
             $this->db->order_by('l.order_index', 'ASC');
             $this->db->order_by('l.id', 'ASC');
             $curriculum = $this->db->get()->result_array();
@@ -182,26 +180,23 @@ class Progress_model extends CI_Model {
 
         // Total mandatory lessons in this course
         $this->db->from('lessons l');
-        $this->db->join('course_modules cm', 'cm.id = l.module_id');
-        $this->db->where('cm.course_id', $course_id);
+        $this->db->where('l.course_id', $course_id);
         $this->db->where('l.is_mandatory', 1);
         $total_mandatory = $this->db->count_all_results();
 
         // If no mandatory lessons, consider all lessons
         if ($total_mandatory === 0) {
             $this->db->from('lessons l');
-            $this->db->join('course_modules cm', 'cm.id = l.module_id');
-            $this->db->where('cm.course_id', $course_id);
+            $this->db->where('l.course_id', $course_id);
             $total_mandatory = $this->db->count_all_results();
         }
 
         // Completed mandatory lessons for this assignment
         $this->db->from('lesson_progress lp');
         $this->db->join('lessons l', 'l.id = lp.lesson_id');
-        $this->db->join('course_modules cm', 'cm.id = l.module_id');
         $this->db->where('lp.assignment_id', $assignment_id);
         $this->db->where('lp.is_completed', 1);
-        $this->db->where('cm.course_id', $course_id);
+        $this->db->where('l.course_id', $course_id);
         if ($total_mandatory > 0) {
             $this->db->where('l.is_mandatory', 1);
         }
@@ -295,9 +290,7 @@ class Progress_model extends CI_Model {
     public function get_resumed_lesson_id($course_id, $assignment_id) {
         $this->db->select('l.id');
         $this->db->from('lessons l');
-        $this->db->join('course_modules cm', 'cm.id = l.module_id');
-        $this->db->where('cm.course_id', (int)$course_id);
-        $this->db->order_by('cm.order_index', 'ASC');
+        $this->db->where('l.course_id', (int)$course_id);
         $this->db->order_by('l.order_index', 'ASC');
         $this->db->order_by('l.id', 'ASC');
         $lessons = $this->db->get()->result_array();

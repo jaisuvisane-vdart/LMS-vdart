@@ -9,6 +9,7 @@ import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
 import ActionMenu from '../../components/common/ActionMenu';
+import UnifiedCourseCreator from '../../components/courses/UnifiedCourseCreator';
 import {
   BookOpen,
   Plus,
@@ -21,14 +22,14 @@ import {
   CheckCircle,
   Clock,
   ArrowUpDown,
-  ArrowLeft
+  Edit3
 } from 'lucide-react';
 
 const InstructorCourses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'create'
-  const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'create' | 'edit'
+  const [editingCourseId, setEditingCourseId] = useState(null);
   const { showAlert, showConfirm } = useDialog();
 
   // Filter & Search states
@@ -41,16 +42,6 @@ const InstructorCourses = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  // New course form
-  const [formData, setFormData] = useState({
-    title: '',
-    category: 'Software Engineering',
-    course_type: '',
-    description: '',
-    estimated_duration_minutes: 60,
-    passing_percentage: 70,
-  });
 
   const navigate = useNavigate();
 
@@ -71,43 +62,6 @@ const InstructorCourses = () => {
   useEffect(() => {
     fetchCourses();
   }, []);
-
-  const handleCreateCourse = async (e) => {
-    e.preventDefault();
-    if (!formData.course_type) {
-      showAlert({
-        title: 'Validation Notice',
-        message: 'Course Type is mandatory. Please select Certified or Non Certified.',
-        type: 'warning',
-      });
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const res = await courseService.createCourse(formData);
-      if (res.status === 'success') {
-        setViewMode('list');
-        setFormData({
-          title: '',
-          category: 'Software Engineering',
-          course_type: '',
-          description: '',
-          estimated_duration_minutes: 60,
-          passing_percentage: 70,
-        });
-        fetchCourses();
-        navigate(`/instructor/course-builder?courseId=${res.data.id}`);
-      }
-    } catch (err) {
-      showAlert({
-        title: 'Creation Error',
-        message: err.response?.data?.message || err.message || 'Error creating course',
-        type: 'error',
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleTogglePublish = async (course) => {
     const isPublished = course.status === 'published';
@@ -141,7 +95,7 @@ const InstructorCourses = () => {
   const handleDeleteCourse = async (id, title) => {
     const confirmed = await showConfirm({
       title: 'Delete Training Program',
-      message: `Are you sure you want to permanently delete "${title}"? All associated modules, lessons, and progress will be erased.`,
+      message: `Are you sure you want to permanently delete "${title}"? All associated lessons, materials, and progress will be erased.`,
       confirmText: 'Delete Course',
       type: 'confirm',
     });
@@ -240,109 +194,20 @@ const InstructorCourses = () => {
     setCurrentPage(1);
   };
 
-  if (viewMode === 'create') {
+  if (viewMode === 'create' || viewMode === 'edit') {
     return (
-      <div className="space-y-6">
-        {/* Top Banner Header with Back Button */}
-        <div className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
-                Authoring Studio
-              </span>
-              <span className="text-xs text-[#64748B] font-medium">New Curriculum Page</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#1E3B78] tracking-tight mt-1.5">
-              Initialize Training Program
-            </h1>
-            <p className="text-xs text-[#64748B] mt-1 max-w-2xl leading-relaxed">
-              Formulate curriculum title, course type, passing benchmark, and learning outcomes before authoring modules.
-            </p>
-          </div>
-          <div>
-            <Button variant="secondary" size="md" icon={ArrowLeft} onClick={() => setViewMode('list')}>
-              Back to Courses
-            </Button>
-          </div>
-        </div>
-
-        {/* Full Page Course Creation Card */}
-        <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 shadow-sm">
-          <form onSubmit={handleCreateCourse} className="space-y-5 w-full">
-            <Input
-              label="Course Title"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="e.g. Modern Full-Stack Web Architecture"
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Select
-                label="Category"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                options={[
-                  { value: 'Software Engineering', label: 'Software Engineering' },
-                  { value: 'Frontend Engineering', label: 'Frontend Engineering' },
-                  { value: 'Information Security', label: 'Information Security' },
-                  { value: 'Corporate Compliance', label: 'Corporate Compliance' },
-                  { value: 'Quality Assurance', label: 'Quality Assurance' },
-                ]}
-              />
-
-              <Select
-                label="Course Type"
-                required
-                value={formData.course_type}
-                onChange={(e) => setFormData({ ...formData, course_type: e.target.value })}
-                options={[
-                  { value: '', label: '-- Select Course Type --' },
-                  { value: 'certified', label: 'Certified' },
-                  { value: 'non_certified', label: 'Non Certified' },
-                ]}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3B78] mb-1.5">
-                Course Description & Learning Outcomes
-              </label>
-              <textarea
-                rows="4"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="clay-input w-full bg-white text-[#172B4D] text-sm p-3.5 rounded-xl focus:outline-none"
-                placeholder="Describe the technical modules and trainee expectations..."
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Estimated Duration (Minutes)"
-                type="number"
-                value={formData.estimated_duration_minutes}
-                onChange={(e) => setFormData({ ...formData, estimated_duration_minutes: e.target.value })}
-              />
-              <Input
-                label="Passing Standard (%)"
-                type="number"
-                value={formData.passing_percentage}
-                onChange={(e) => setFormData({ ...formData, passing_percentage: e.target.value })}
-              />
-            </div>
-
-            <div className="pt-5 border-t border-[#E2E8F0]/60 flex items-center justify-end gap-3">
-              <Button variant="secondary" onClick={() => setViewMode('list')}>
-                Cancel
-              </Button>
-              <Button type="submit" variant="navy" loading={submitting}>
-                Create Course & Open Studio
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <UnifiedCourseCreator
+        courseId={viewMode === 'edit' ? editingCourseId : null}
+        onCancel={() => {
+          setViewMode('list');
+          setEditingCourseId(null);
+        }}
+        onSuccess={() => {
+          setViewMode('list');
+          setEditingCourseId(null);
+          fetchCourses();
+        }}
+      />
     );
   }
 
@@ -517,7 +382,7 @@ const InstructorCourses = () => {
               >
                 <th className="py-3.5 px-4 text-center">Course Details & Category</th>
                 <th className="py-3.5 px-4 text-center">Course Type</th>
-                <th className="py-3.5 px-4 text-center">Structure</th>
+                <th className="py-3.5 px-4 text-center">Lessons</th>
                 <th className="py-3.5 px-4 text-center">Duration & Benchmark</th>
                 <th className="py-3.5 px-4 text-center">Status</th>
                 <th className="py-3.5 px-4 text-center">Actions</th>
@@ -580,12 +445,9 @@ const InstructorCourses = () => {
                       </span>
                     </td>
 
-                    {/* Structure: Modules & Lessons */}
+                    {/* Structure: Lessons */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="font-bold text-[#1E3B78] font-mono text-xs">
-                        {course.modules_count || 0} Modules
-                      </div>
-                      <div className="text-[11px] text-[#64748B] font-medium mt-0.5">
                         {course.lessons_count || 0} Lessons
                       </div>
                     </td>
@@ -635,9 +497,12 @@ const InstructorCourses = () => {
                             },
                           },
                           {
-                            label: 'Course Studio',
-                            icon: Layers,
-                            onClick: () => navigate(`/instructor/course-builder?courseId=${course.id}`),
+                            label: 'Edit Course',
+                            icon: Edit3,
+                            onClick: () => {
+                              setEditingCourseId(course.id);
+                              setViewMode('edit');
+                            },
                           },
                           {
                             label: 'Delete Course',

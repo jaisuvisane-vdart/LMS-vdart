@@ -121,11 +121,11 @@ const LearnerDashboard = () => {
                 <Button
                   variant="secondary"
                   size="lg"
-                  icon={PlayCircle}
+                  icon={pct >= 100 || featuredCourse.status === 'completed' ? CheckCircle : PlayCircle}
                   className="bg-white text-[#1E3B78] hover:bg-[#F3F6FB] border-white h-12 px-6 shadow-md"
                   onClick={() => navigate(`/learner/courses/${featuredCourse.course_id}?resume=true${featuredCourse.resumed_lesson_id ? `&lessonId=${featuredCourse.resumed_lesson_id}` : ''}`)}
                 >
-                  Resume Learning Unit
+                  {pct >= 100 || featuredCourse.status === 'completed' ? 'Completed' : 'Resume Learning Unit'}
                 </Button>
               </div>
             </div>
@@ -186,10 +186,10 @@ const LearnerDashboard = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          icon={ChevronRight}
+                          icon={isCompleted || pct >= 100 ? CheckCircle : ChevronRight}
                           onClick={() => navigate(`/learner/courses/${c.course_id}?resume=true${c.resumed_lesson_id ? `&lessonId=${c.resumed_lesson_id}` : ''}`)}
                         >
-                          {isCompleted ? 'Review Course' : 'Study Unit'}
+                          {isCompleted || pct >= 100 ? 'Completed' : 'Study Unit'}
                         </Button>
                       </div>
                     </div>
