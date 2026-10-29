@@ -30,3 +30,17 @@ user_guide_src/cilexer/pycilexer.egg-info/*
 *.sublime-project
 /tests/tests/
 /tests/results/
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Google Cloud credentials
+application/config/google_service_account.json
+
+# Logs
+*.log
+
+# Cache and temporary files
+application/cache/*
+!application/cache/index.html
