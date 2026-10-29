@@ -73,20 +73,32 @@ const ActionMenu = ({
       }
     };
 
-    const handleWindowEvents = () => {
+    const handleResize = () => {
+      setIsOpen(false);
+    };
+
+    const handleScroll = (e) => {
+      if (
+        e.target &&
+        e.target instanceof Node &&
+        menuRef.current &&
+        menuRef.current.contains(e.target)
+      ) {
+        return;
+      }
       setIsOpen(false);
     };
 
     document.addEventListener('mousedown', handleOutsideClick);
     document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleWindowEvents);
-    window.addEventListener('scroll', handleWindowEvents, true);
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleScroll, true);
 
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleWindowEvents);
-      window.removeEventListener('scroll', handleWindowEvents, true);
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll, true);
     };
   }, [isOpen]);
 
@@ -121,6 +133,7 @@ const ActionMenu = ({
             }}
             className="bg-white rounded-2xl shadow-2xl border border-[#CBD5E1] p-1.5 overflow-hidden text-left text-xs space-y-1"
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {activeItems.map((item, idx) => {
               const Icon = item.icon;

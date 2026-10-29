@@ -7,6 +7,7 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import WelcomeBanner from '../../components/common/WelcomeBanner';
 import ProgressBar from '../../components/common/ProgressBar';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import { BookOpen, CheckCircle, Clock, Award, PlayCircle, Calendar, FileText, ChevronRight } from 'lucide-react';
 
 const LearnerDashboard = () => {
@@ -48,15 +49,17 @@ const LearnerDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner with Personalized Welcome & Dynamic Greeting */}
-      <WelcomeBanner
-        role="learner"
-        actions={
-          <div className="clay-pill flex items-center gap-2 text-xs font-semibold text-[#2C51A2] bg-white px-3.5 py-2 border border-[#E2E8F0] rounded-xl shadow-xs">
-            <Calendar className="w-3.5 h-3.5 text-[#2C51A2]" />
-            <span>Corporate Deadline: Nov 15, 2026</span>
-          </div>
-        }
-      />
+      <div data-aos="fade-down">
+        <WelcomeBanner
+          role="learner"
+          actions={
+            <div className="clay-pill flex items-center gap-2 text-xs font-semibold text-[#2C51A2] bg-white px-3.5 py-2 border border-[#E2E8F0] rounded-xl shadow-xs">
+              <Calendar className="w-3.5 h-3.5 text-[#2C51A2]" />
+              <span>Corporate Deadline: Nov 15, 2026</span>
+            </div>
+          }
+        />
+      </div>
 
       {/* KPI Cards Grid with fluid wrapping */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -65,6 +68,8 @@ const LearnerDashboard = () => {
           return (
             <div
               key={idx}
+              data-aos="fade-up"
+              data-aos-delay={idx * 60}
               className="clay-card clay-card-hover p-5 rounded-2xl border border-white/60 flex flex-col justify-between"
             >
               <div>
@@ -77,7 +82,7 @@ const LearnerDashboard = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-[#172B4D] tracking-tight">
-                  {loading ? '—' : kpi.value}
+                  {loading ? '—' : <AnimatedNumber value={kpi.value} />}
                 </div>
               </div>
               <div className="text-[11px] text-[#64748B] font-medium pt-2.5 border-t border-[#E2E8F0]/60 mt-2.5">
@@ -95,7 +100,7 @@ const LearnerDashboard = () => {
         const pct = Math.round(featuredCourse.progress_percentage || 0);
 
         return (
-          <div className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white p-6 sm:p-8 rounded-2xl shadow-[0_12px_28px_rgba(44, 81, 162, 0.08)] border border-white/10 relative overflow-hidden">
+          <div data-aos="fade-up" data-aos-delay="150" className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white p-6 sm:p-8 rounded-2xl shadow-[0_12px_28px_rgba(44, 81, 162, 0.08)] border border-white/10 relative overflow-hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
               <div className="space-y-2 max-w-2xl">
                 <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-white/20 backdrop-blur text-white px-3 py-1 rounded-full border border-white/20">
@@ -110,7 +115,7 @@ const LearnerDashboard = () => {
                 <div className="pt-2 w-full max-w-md">
                   <div className="flex justify-between text-xs text-[#E2E9F4] mb-1.5 font-semibold">
                     <span>Course Progress</span>
-                    <span>{pct}% Complete</span>
+                    <span><AnimatedNumber value={pct} suffix="% Complete" /></span>
                   </div>
                   <div className="w-full bg-[#172B4D]/60 h-2.5 rounded-full overflow-hidden p-0.5 shadow-inner">
                     <div className="bg-white h-full rounded-full transition-all duration-300 shadow-sm" style={{ width: `${pct}%` }}></div>
@@ -135,7 +140,7 @@ const LearnerDashboard = () => {
 
       {/* Main Grid: My Assigned Courses */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div data-aos="fade-right" data-aos-delay="200" className="lg:col-span-2">
           <Card
             title="My Assigned Training Programs"
             subtitle="Curriculum assigned by your department supervisor"
@@ -201,7 +206,7 @@ const LearnerDashboard = () => {
         </div>
 
         {/* Right 1 Col: Required Assessments */}
-        <div className="space-y-6">
+        <div data-aos="fade-left" data-aos-delay="250" className="space-y-6">
           <Card
             title="Mandatory Assessments"
             action={

@@ -7,6 +7,7 @@ import UnauthorizedPage from '../pages/common/UnauthorizedPage';
 
 import DashboardLayout from '../components/layout/DashboardLayout';
 import RoleGuard from './RoleGuard';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import AllCourses from '../pages/admin/AllCourses';
@@ -18,6 +19,7 @@ import InstructorCourses from '../pages/instructor/InstructorCourses';
 import CourseAssignments from '../pages/instructor/CourseAssignments';
 import TraineePerformance from '../pages/instructor/TraineePerformance';
 import LearnerDashboard from '../pages/learner/LearnerDashboard';
+import LearnerCatalog from '../pages/learner/LearnerCatalog';
 import LearnerCourses from '../pages/learner/LearnerCourses';
 import CoursePlayer from '../pages/learner/CoursePlayer';
 import LearnerAssessments from '../pages/learner/LearnerAssessments';
@@ -63,8 +65,9 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="users" element={<UserManagement />} />
+        <Route path="users" element={<ErrorBoundary><UserManagement /></ErrorBoundary>} />
         <Route path="courses" element={<AllCourses />} />
+        <Route path="assignments" element={<CourseAssignments />} />
         <Route path="reports" element={<ReportsAnalytics />} />
         <Route path="audit-logs" element={<AuditLogs />} />
         <Route path="settings" element={<Settings />} />
@@ -100,6 +103,7 @@ const AppRoutes = () => {
       >
         <Route index element={<Navigate to="/learner/dashboard" replace />} />
         <Route path="dashboard" element={<LearnerDashboard />} />
+        <Route path="catalog" element={<LearnerCatalog />} />
         <Route path="courses" element={<LearnerCourses />} />
         <Route path="courses/:courseId" element={<CoursePlayer />} />
         <Route path="assessments" element={<LearnerAssessments />} />

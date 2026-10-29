@@ -35,6 +35,11 @@ $route['api/courses/(:num)']['delete']          = 'api/courses/delete/$1';
 $route['api/courses/(:num)/publish']            = 'api/courses/publish/$1';
 $route['api/courses/(:num)/unpublish']          = 'api/courses/unpublish/$1';
 
+// Course Categories Routes
+$route['api/categories']['get']                 = 'api/categories/index';
+$route['api/categories']['post']                = 'api/categories/create';
+$route['api/categories/(:num)']['delete']       = 'api/categories/delete/$1';
+
 // Curriculum Modules Routes
 $route['api/courses/(:num)/modules']['post']    = 'api/modules/create/$1';
 $route['api/modules/(:num)']['put']             = 'api/modules/update/$1';
@@ -57,6 +62,7 @@ $route['api/materials/(:num)']['delete']        = 'api/materials/delete/$1';
 
 // Phase 3: Course Assignments Routes
 $route['api/course-assignments/learners']       = 'api/assignments/learners';
+$route['api/course-assignments/batches']        = 'api/assignments/batches';
 $route['api/course-assignments']['get']         = 'api/assignments/index';
 $route['api/course-assignments']['post']        = 'api/assignments/create';
 $route['api/course-assignments/(:num)']['delete'] = 'api/assignments/delete/$1';
@@ -124,3 +130,22 @@ $route['api/certificates']['get']                      = 'api/certificates/index
 $route['api/certificates/(:num)']['get']              = 'api/certificates/show/$1';
 $route['api/certificates/verify/(:any)']['get']        = 'api/certificates/verify/$1';
 $route['api/certificates/check-eligibility']['post']   = 'api/certificates/check_eligibility';
+
+// User Governance: Batches & Segregation
+$route['api/users/batches']['get']                     = 'api/users/batches';
+
+// Google Sheets Synchronization
+$route['api/google-sheets/sync']['post']               = 'api/google_sheets/sync';
+$route['api/google-sheets/webhook']['post']            = 'api/google_sheets/webhook';
+$route['api/google-sheets/status']['get']              = 'api/google_sheets/status';
+$route['api/google-sheets/config']['get']              = 'api/google_sheets/config';
+$route['api/google-sheets/config']['put']              = 'api/google_sheets/update_config';
+
+// Course Catalog & Self-Enrollment Requests
+$route['api/enrollments/catalog']['get']               = 'api/enrollments/catalog';
+$route['api/enrollments/request']['post']              = 'api/enrollments/request';
+$route['api/enrollments/requests']['get']              = 'api/enrollments/requests';
+$route['api/enrollments/pending-count']['get']         = 'api/enrollments/pending_count';
+$route['api/enrollments/(:num)/approve']['post']       = 'api/enrollments/approve/$1';
+$route['api/enrollments/(:num)/reject']['post']        = 'api/enrollments/reject/$1';
+

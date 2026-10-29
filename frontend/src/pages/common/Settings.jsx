@@ -136,7 +136,7 @@ const Settings = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner with Minimal Clay Surface */}
-      <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
@@ -187,7 +187,7 @@ const Settings = () => {
       {/* Settings Grid: Left Tabs, Right Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Navigation Tabs */}
-        <div className="lg:col-span-1 space-y-1.5 clay-card p-3 rounded-2xl">
+        <div data-aos="fade-right" data-aos-delay="100" className="lg:col-span-1 space-y-1.5 clay-card p-3 rounded-2xl">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -213,7 +213,7 @@ const Settings = () => {
         </div>
 
         {/* Content Panel */}
-        <div className="lg:col-span-3">
+        <div data-aos="fade-left" data-aos-delay="100" className="lg:col-span-3">
           {/* Tab 1: Profile Information */}
           {activeTab === 'profile' && (
             <Card title="Personal Information" subtitle="Update your employee profile and communication contact details">

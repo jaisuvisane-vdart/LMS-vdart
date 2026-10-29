@@ -18,7 +18,6 @@ class Assessment_model extends CI_Model {
             c.title AS course_title,
             c.instructor_id,
             CONCAT(u.first_name, " ", u.last_name) AS instructor_name,
-            cm.title AS module_title,
             (SELECT COUNT(*) FROM assessment_questions aq WHERE aq.assessment_id = a.id) AS total_questions,
             (SELECT COALESCE(SUM(marks), 0) FROM assessment_questions aq WHERE aq.assessment_id = a.id) AS total_marks,
             (SELECT COUNT(*) FROM assessment_attempts aa WHERE aa.assessment_id = a.id) AS total_attempts
@@ -26,7 +25,6 @@ class Assessment_model extends CI_Model {
         $this->db->from('assessments a');
         $this->db->join('courses c', 'c.id = a.course_id');
         $this->db->join('users u', 'u.id = c.instructor_id', 'left');
-        $this->db->join('course_modules cm', 'cm.id = a.module_id', 'left');
 
         if ($role === 'instructor' && $user_id) {
             $this->db->where('c.instructor_id', $user_id);
@@ -60,13 +58,11 @@ class Assessment_model extends CI_Model {
             a.*,
             c.title AS course_title,
             c.instructor_id,
-            CONCAT(u.first_name, " ", u.last_name) AS instructor_name,
-            cm.title AS module_title
+            CONCAT(u.first_name, " ", u.last_name) AS instructor_name
         ');
         $this->db->from('assessments a');
         $this->db->join('courses c', 'c.id = a.course_id');
         $this->db->join('users u', 'u.id = c.instructor_id', 'left');
-        $this->db->join('course_modules cm', 'cm.id = a.module_id', 'left');
         $this->db->where('a.id', (int)$id);
         $assessment = $this->db->get()->row_array();
 
@@ -138,7 +134,6 @@ class Assessment_model extends CI_Model {
     public function create_assessment($data) {
         $insert = [
             'course_id'          => (int)$data['course_id'],
-            'module_id'          => !empty($data['module_id']) ? (int)$data['module_id'] : null,
             'title'              => trim($data['title']),
             'description'        => $data['description'] ?? null,
             'passing_percentage' => isset($data['passing_percentage']) ? (float)$data['passing_percentage'] : 70.00,
@@ -160,7 +155,6 @@ class Assessment_model extends CI_Model {
         $update = [];
         if (isset($data['title'])) $update['title'] = trim($data['title']);
         if (isset($data['description'])) $update['description'] = $data['description'];
-        if (isset($data['module_id'])) $update['module_id'] = !empty($data['module_id']) ? (int)$data['module_id'] : null;
         if (isset($data['passing_percentage'])) $update['passing_percentage'] = (float)$data['passing_percentage'];
         if (isset($data['time_limit_minutes'])) $update['time_limit_minutes'] = (int)$data['time_limit_minutes'];
         if (isset($data['max_attempts'])) $update['max_attempts'] = (int)$data['max_attempts'];
@@ -270,7 +264,6 @@ class Assessment_model extends CI_Model {
             SELECT 
                 a.id,
                 a.course_id,
-                a.module_id,
                 a.title,
                 a.description,
                 a.passing_percentage,

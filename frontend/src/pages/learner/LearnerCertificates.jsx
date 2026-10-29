@@ -5,6 +5,7 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import {
   Award,
   ShieldCheck,
@@ -71,7 +72,7 @@ const LearnerCertificates = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
-      <div className="clay-card p-6 sm:p-7 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -89,7 +90,7 @@ const LearnerCertificates = () => {
       </div>
 
       {/* Verification Query Widget */}
-      <div className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white p-6 sm:p-7 rounded-2xl border border-white/10 shadow-lg">
+      <div data-aos="fade-up" data-aos-delay="100" className="bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white p-6 sm:p-7 rounded-2xl border border-white/10 shadow-lg">
         <div className="max-w-2xl space-y-2">
           <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-white/20 text-white px-3 py-1 rounded-full border border-white/20">
             Credential Authenticity Audit
@@ -171,9 +172,11 @@ const LearnerCertificates = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {certificates.map((cert) => (
+            {certificates.map((cert, idx) => (
               <div
                 key={cert.id}
+                data-aos="fade-up"
+                data-aos-delay={idx * 80}
                 className="clay-card clay-card-hover p-6 rounded-2xl border border-white/60 flex flex-col justify-between space-y-4"
               >
                 <div className="space-y-3">
@@ -218,7 +221,9 @@ const LearnerCertificates = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#64748B]">Evaluation Grade:</span>
-                      <span className="font-bold text-[#2C51A2]">{parseFloat(cert.final_score).toFixed(1)}%</span>
+                      <span className="font-bold text-[#2C51A2]">
+                        <AnimatedNumber value={parseFloat(cert.final_score).toFixed(1)} suffix="%" />
+                      </span>
                     </div>
                   </div>
                 </div>

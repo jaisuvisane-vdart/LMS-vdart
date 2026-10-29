@@ -8,6 +8,7 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import ProgressBar from '../../components/common/ProgressBar';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import {
   ArrowLeft,
   CheckCircle,
@@ -836,7 +837,7 @@ const CoursePlayer = () => {
   return (
     <div className="space-y-6">
       {/* Top Navigation Bar */}
-      <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/learner/courses')}
@@ -859,7 +860,7 @@ const CoursePlayer = () => {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">Overall Progress:</span>
-            <span className="text-xs font-extrabold text-[#1E3B78]">{currentProgressPercent}%</span>
+            <span className="text-xs font-extrabold text-[#1E3B78]"><AnimatedNumber value={currentProgressPercent} suffix="%" /></span>
             <div className="w-24 sm:w-32">
               <ProgressBar value={currentProgressPercent} height="h-2" />
             </div>
@@ -1007,7 +1008,7 @@ const CoursePlayer = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
           {/* LEFT SYLLABUS ACCORDION (1 Col on Desktop, Collapsible on Mobile) */}
-          <div className={`lg:block ${showMobileSyllabus ? 'block' : 'hidden'} clay-card rounded-2xl border border-white/60 overflow-hidden`}>
+          <div data-aos="fade-right" data-aos-delay="150" className={`lg:block ${showMobileSyllabus ? 'block' : 'hidden'} clay-card rounded-2xl border border-white/60 overflow-hidden`}>
             <div className="p-4 sm:p-5 bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] text-white">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-[#93C5FD]">
@@ -1027,7 +1028,7 @@ const CoursePlayer = () => {
               <div className="mt-3 pt-3 border-t border-white/20 space-y-1">
                 <div className="flex justify-between text-[11px] font-semibold text-[#CBD5E1]">
                   <span>Curriculum Completed</span>
-                  <span>{currentProgressPercent}%</span>
+                  <span><AnimatedNumber value={currentProgressPercent} suffix="%" /></span>
                 </div>
                 <ProgressBar value={currentProgressPercent} height="h-2" />
               </div>
@@ -1146,7 +1147,7 @@ const CoursePlayer = () => {
           </div>
 
           {/* RIGHT MAIN LEARNING STAGE (3 Cols) */}
-          <div className="lg:col-span-3 space-y-6">
+          <div data-aos="fade-left" data-aos-delay="150" className="lg:col-span-3 space-y-6">
             {isQuizActive ? (
               <div className="space-y-6">
                 {quizLoading ? (
@@ -1216,19 +1217,19 @@ const CoursePlayer = () => {
                       <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Score Percentage</div>
                         <div className={`text-xl font-mono font-bold mt-1 ${quizResult.is_passed ? 'text-[#16A34A]' : 'text-[#DC2626]'}`}>
-                          {quizResult.percentage}%
+                          <AnimatedNumber value={quizResult.percentage} suffix="%" />
                         </div>
                       </div>
                       <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Passing Benchmark</div>
                         <div className="text-xl font-mono font-bold text-[#1E3B78] mt-1">
-                          {quizResult.passing_percentage}%
+                          <AnimatedNumber value={quizResult.passing_percentage} suffix="%" />
                         </div>
                       </div>
                       <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Points Awarded</div>
                         <div className="text-xl font-mono font-bold text-[#1E3B78] mt-1">
-                          {quizResult.total_score} / {quizResult.max_score}
+                          <AnimatedNumber value={`${quizResult.total_score} / ${quizResult.max_score}`} />
                         </div>
                       </div>
                       <div className="p-4 rounded-xl bg-white border border-[#CBD5E1] text-center shadow-xs">

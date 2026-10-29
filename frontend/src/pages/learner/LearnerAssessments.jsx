@@ -5,6 +5,7 @@ import assessmentService from '../../services/assessmentService';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import {
   Award,
   Clock,
@@ -46,7 +47,7 @@ const LearnerAssessments = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
-      <div className="clay-card p-6 sm:p-7 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -84,7 +85,7 @@ const LearnerAssessments = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4">
-            {assessments.map((a) => {
+            {assessments.map((a, idx) => {
               const attemptsTaken = parseInt(a.attempts_taken || 0);
               const maxAttempts = 1; // Strict single-attempt policy
               const attemptsRemaining = Math.max(0, maxAttempts - attemptsTaken);
@@ -96,6 +97,8 @@ const LearnerAssessments = () => {
               return (
                 <div
                   key={a.id}
+                  data-aos="fade-up"
+                  data-aos-delay={idx * 80}
                   className="clay-card clay-card-hover p-6 rounded-2xl border border-white/60"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -143,11 +146,11 @@ const LearnerAssessments = () => {
                           Passing Score: {parseFloat(a.passing_percentage).toFixed(0)}%
                         </span>
                         <span className="font-semibold text-[#64748B]">
-                          Attempts: <strong className="text-[#172B4D]">{attemptsTaken}</strong> / {maxAttempts} (Single Attempt)
+                          Attempts: <strong className="text-[#172B4D]"><AnimatedNumber value={`${attemptsTaken} / ${maxAttempts}`} /></strong> (Single Attempt)
                         </span>
                         {hasTaken && (
                           <span className="font-semibold text-[#1E3B78]">
-                            Final Score: <strong className="text-[#2C51A2]">{highestScore}%</strong>
+                            Final Score: <strong className="text-[#2C51A2]"><AnimatedNumber value={highestScore} suffix="%" /></strong>
                           </span>
                         )}
                       </div>

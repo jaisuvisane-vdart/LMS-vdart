@@ -6,7 +6,8 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import ProgressBar from '../../components/common/ProgressBar';
-import { BookOpen, Calendar, Clock, Award, PlayCircle, CheckCircle, AlertCircle } from 'lucide-react';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
+import { BookOpen, Calendar, Clock, Award, PlayCircle, CheckCircle, AlertCircle, Compass } from 'lucide-react';
 
 const LearnerCourses = () => {
   const [courses, setCourses] = useState([]);
@@ -50,7 +51,7 @@ const LearnerCourses = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
-      <div className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -65,10 +66,21 @@ const LearnerCourses = () => {
             Complete assigned courses, access learning materials, and fulfill compliance benchmarks.
           </p>
         </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            size="sm"
+            icon={Compass}
+            onClick={() => navigate('/learner/catalog')}
+          >
+            Explore Course Catalog
+          </Button>
+        </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-aos="fade-up" data-aos-delay="100" className="flex flex-wrap items-center gap-2">
         {[
           { label: 'All Assigned Programs', value: '' },
           { label: 'In Progress', value: 'in_progress' },
@@ -100,17 +112,24 @@ const LearnerCourses = () => {
           <p className="text-xs text-[#64748B] mt-1 mb-4">
             You do not have any active training programs matching this filter.
           </p>
-          {user?.role === 'admin' && (
-            <Button variant="primary" size="sm" onClick={() => navigate('/admin/courses')}>
-              Open Global Catalog to Preview & Launch Any Course
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button variant="primary" size="sm" icon={Compass} onClick={() => navigate('/learner/catalog')}>
+              Browse Course Catalog & Self-Enroll
             </Button>
-          )}
+            {user?.role === 'admin' && (
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/courses')}>
+                Open Global Catalog Admin
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {courses.map((item) => (
+          {courses.map((item, idx) => (
             <div
               key={item.id}
+              data-aos="fade-up"
+              data-aos-delay={idx * 80}
               className="clay-card clay-card-hover rounded-2xl border border-white/60 flex flex-col justify-between overflow-hidden"
             >
               <div className="p-5 sm:p-6">
@@ -156,11 +175,11 @@ const LearnerCourses = () => {
                 <div className="mt-5 space-y-1.5">
                   <div className="flex justify-between text-xs font-bold text-[#1E3B78]">
                     <span>Training Progress</span>
-                    <span>{item.progress_percentage}%</span>
+                    <span><AnimatedNumber value={item.progress_percentage} suffix="%" /></span>
                   </div>
                   <ProgressBar value={item.progress_percentage} height="h-2.5" />
                   <div className="text-[10px] text-[#64748B] font-medium text-right">
-                    {item.completed_lessons} of {item.total_lessons} lessons completed
+                    <AnimatedNumber value={`${item.completed_lessons} of ${item.total_lessons}`} /> lessons completed
                   </div>
                 </div>
               </div>

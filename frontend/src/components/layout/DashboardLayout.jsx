@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import AOS from 'aos';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
@@ -7,11 +8,31 @@ const DashboardLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const mainScrollRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
 
-  // Close mobile drawer on route change
-  React.useEffect(() => {
+  // Close mobile drawer and refresh AOS on route change
+  useEffect(() => {
     setIsMobileMenuOpen(false);
+
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+
+    const timer = setTimeout(() => {
+      AOS.refreshHard();
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [location.pathname]);
+
+  const handleMainScroll = () => {
+    if (scrollTimeoutRef.current) return;
+    scrollTimeoutRef.current = setTimeout(() => {
+      AOS.refresh();
+      scrollTimeoutRef.current = null;
+    }, 150);
+  };
 
   const handleToggleSidebar = () => {
     if (window.innerWidth < 1024) {
@@ -47,8 +68,12 @@ const DashboardLayout = () => {
         />
 
         {/* Dynamic Page Content - Full Width Fluid Canvas */}
-        <main className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-6 bg-[#F3F6FB] min-w-0 touch-scroll">
-          <div key={location.pathname} className="w-full min-w-0 animate-page-enter">
+        <main
+          ref={mainScrollRef}
+          onScroll={handleMainScroll}
+          className="flex-1 overflow-y-auto p-3.5 sm:p-5 lg:p-6 bg-[#F3F6FB] min-w-0 touch-scroll"
+        >
+          <div key={location.pathname} className="w-full min-w-0">
             <Outlet />
           </div>
         </main>

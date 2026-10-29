@@ -6,6 +6,7 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import WelcomeBanner from '../../components/common/WelcomeBanner';
 import ProgressBar from '../../components/common/ProgressBar';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import { BookOpen, Users, CheckSquare, Award, Plus, FileText, ArrowRight, ArrowUpRight } from 'lucide-react';
 
 const InstructorDashboard = () => {
@@ -42,14 +43,16 @@ const InstructorDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner with Personalized Welcome & Dynamic Greeting */}
-      <WelcomeBanner
-        role="instructor"
-        actions={
-          <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/instructor/courses')}>
-            Create New Course
-          </Button>
-        }
-      />
+      <div data-aos="fade-down">
+        <WelcomeBanner
+          role="instructor"
+          actions={
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => navigate('/instructor/courses')}>
+              Create New Course
+            </Button>
+          }
+        />
+      </div>
 
       {/* KPI Cards Grid with Minimal Clay Elevation */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -58,6 +61,8 @@ const InstructorDashboard = () => {
           return (
             <div
               key={idx}
+              data-aos="fade-up"
+              data-aos-delay={idx * 60}
               className={`clay-card p-5 rounded-2xl clay-card-hover flex flex-col justify-between ${kpi.accent}`}
             >
               <div>
@@ -76,7 +81,7 @@ const InstructorDashboard = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-extrabold text-[#172B4D] tracking-tight font-mono">
-                  {loading ? '—' : kpi.value}
+                  {loading ? '—' : <AnimatedNumber value={kpi.value} />}
                 </div>
               </div>
               <div className="text-[10px] text-[#64748B] font-semibold pt-2 border-t border-[#F1F5F9] mt-2">
@@ -90,7 +95,7 @@ const InstructorDashboard = () => {
       {/* Main Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left 2 Cols: My Active Courses Overview */}
-        <div className="lg:col-span-2">
+        <div data-aos="fade-right" data-aos-delay="150" className="lg:col-span-2">
           <Card
             title="My Courses & Training Programs"
             subtitle="Authoring milestones and active trainee enrollments"
@@ -132,7 +137,7 @@ const InstructorDashboard = () => {
         </div>
 
         {/* Right 1 Col: Quick Workflow Shortcuts */}
-        <div className="space-y-6">
+        <div data-aos="fade-left" data-aos-delay="200" className="space-y-6">
           <Card title="Curriculum Builder Actions">
             <div className="space-y-2.5">
               <button

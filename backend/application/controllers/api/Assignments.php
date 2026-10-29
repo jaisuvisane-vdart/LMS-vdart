@@ -27,6 +27,7 @@ class Assignments extends API_Controller {
         $filters = [
             'course_id' => $this->input->get('course_id', TRUE),
             'status'    => $this->input->get('status', TRUE),
+            'batch'     => $this->input->get('batch', TRUE),
             'search'    => $this->input->get('search', TRUE),
         ];
 
@@ -43,10 +44,33 @@ class Assignments extends API_Controller {
         $input = $this->get_json_input();
         $course_id = (int)($input['course_id'] ?? 0);
         $learner_ids = $input['learner_ids'] ?? [];
+        $batches = $input['batches'] ?? [];
         $due_date = !empty($input['due_date']) ? date('Y-m-d H:i:s', strtotime($input['due_date'])) : null;
 
-        if ($course_id <= 0 || empty($learner_ids) || !is_array($learner_ids)) {
-            return $this->error_response('Course ID and at least one trainee learner are required.', 422);
+        if (!is_array($learner_ids)) {
+            $learner_ids = !empty($learner_ids) ? [$learner_ids] : [];
+        }
+
+        // If batches are supplied, resolve all active learners in those batches
+        if (!empty($batches)) {
+            if (!is_array($batches)) {
+                $batches = [$batches];
+            }
+            $clean_batches = array_filter(array_map('trim', $batches));
+            if (!empty($clean_batches)) {
+                $this->db->select('id');
+                $this->db->from('users');
+                $this->db->where('role_id', 3);
+                $this->db->where('status', 'active');
+                $this->db->where_in('batch', $clean_batches);
+                $batch_learners = $this->db->get()->result_array();
+                $batch_learner_ids = array_column($batch_learners, 'id');
+                $learner_ids = array_unique(array_merge($learner_ids, $batch_learner_ids));
+            }
+        }
+
+        if ($course_id <= 0 || empty($learner_ids)) {
+            return $this->error_response('Course ID and at least one trainee learner or batch are required.', 422);
         }
 
         $course = $this->courses->get_by_id($course_id);
@@ -73,13 +97,21 @@ class Assignments extends API_Controller {
         $this->load->model('Audit_model', 'audit');
         $this->load->model('Notification_model', 'notifications');
 
+        $audit_metadata = [
+            'course_title'   => $course['title'],
+            'learners_count' => count($assigned_ids),
+        ];
+        if (!empty($batches)) {
+            $audit_metadata['batches'] = is_array($batches) ? implode(', ', $batches) : (string)$batches;
+        }
+
         $this->audit->log(
             $user_id,
             'COURSE_ASSIGNED',
             'courses',
             $course_id,
             null,
-            ['course_title' => $course['title'], 'learners_count' => count($assigned_ids)]
+            $audit_metadata
         );
 
         foreach ($learner_ids as $lid) {
@@ -121,7 +153,7 @@ class Assignments extends API_Controller {
     public function learners() {
         $this->require_role(['admin', 'instructor']);
 
-        $this->db->select('u.id, u.employee_id, u.first_name, u.last_name, u.email, u.department, u.designation');
+        $this->db->select('u.id, u.employee_id, u.first_name, u.last_name, u.email, u.department, u.batch, u.designation');
         $this->db->from('users u');
         $this->db->where('u.role_id', 3); // Learner role
         $this->db->where('u.status', 'active');
@@ -129,6 +161,19 @@ class Assignments extends API_Controller {
         $learners = $this->db->get()->result_array();
 
         return $this->json_response($learners, 'Active trainee learners fetched.');
+    }
+
+    /**
+     * GET /api/course-assignments/batches
+     * Returns list of all distinct trainee batches with counts and optional course enrollment numbers
+     */
+    public function batches() {
+        $this->require_role(['admin', 'instructor']);
+
+        $course_id = $this->input->get('course_id', TRUE);
+        $batches = $this->assignments->get_batches_summary(!empty($course_id) ? (int)$course_id : null);
+
+        return $this->json_response($batches, 'Trainee batches retrieved successfully.');
     }
 
     /**

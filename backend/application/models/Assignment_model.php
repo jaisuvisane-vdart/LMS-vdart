@@ -90,7 +90,7 @@ class Assignment_model extends CI_Model {
      */
     public function get_all_assignments($filters = [], $role = 'admin', $user_id = null) {
         $this->db->select('ca.*, c.course_type, c.title as course_title, c.category as course_category, c.status as course_status, c.instructor_id,
-                           CONCAT(u.first_name, " ", u.last_name) as learner_name, u.email as learner_email, u.employee_id as learner_employee_id, u.department as learner_department,
+                           CONCAT(u.first_name, " ", u.last_name) as learner_name, u.email as learner_email, u.employee_id as learner_employee_id, u.department as learner_department, u.batch as learner_batch,
                            CONCAT(ab.first_name, " ", ab.last_name) as assigned_by_name');
         $this->db->from('course_assignments ca');
         $this->db->join('courses c', 'c.id = ca.course_id');
@@ -109,12 +109,18 @@ class Assignment_model extends CI_Model {
             $this->db->where('ca.status', $filters['status']);
         }
 
+        if (!empty($filters['batch'])) {
+            $this->db->where('u.batch', $filters['batch']);
+        }
+
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $this->db->group_start();
             $this->db->like('u.first_name', $search);
             $this->db->or_like('u.last_name', $search);
             $this->db->or_like('u.email', $search);
+            $this->db->or_like('u.employee_id', $search);
+            $this->db->or_like('u.batch', $search);
             $this->db->or_like('c.title', $search);
             $this->db->group_end();
         }
@@ -201,6 +207,43 @@ class Assignment_model extends CI_Model {
             'course_id'  => (int)$course_id,
             'learner_id' => (int)$learner_id
         ])->row_array();
+    }
+
+    /**
+     * Get distinct trainee batches with learner counts and enrollment metrics
+     * @param int|null $course_id Optional course ID to inspect enrolled counts
+     * @return array
+     */
+    public function get_batches_summary($course_id = null) {
+        $this->db->select('batch, COUNT(id) as total_learners, 
+                           SUM(CASE WHEN status = "active" THEN 1 ELSE 0 END) as active_learners');
+        $this->db->from('users');
+        $this->db->where('role_id', 3); // Learner/trainee role
+        $this->db->where('batch IS NOT NULL', null, false);
+        $this->db->where('batch !=', '');
+        $this->db->group_by('batch');
+        $this->db->order_by('batch', 'ASC');
+        $batches = $this->db->get()->result_array();
+
+        foreach ($batches as &$b) {
+            $b['total_learners'] = (int)($b['total_learners'] ?? 0);
+            $b['active_learners'] = (int)($b['active_learners'] ?? 0);
+
+            if ($course_id) {
+                $enrolled_count = $this->db->from('course_assignments ca')
+                    ->join('users u', 'u.id = ca.learner_id')
+                    ->where('ca.course_id', (int)$course_id)
+                    ->where('u.batch', $b['batch'])
+                    ->where('u.role_id', 3)
+                    ->where('u.status', 'active')
+                    ->count_all_results();
+                $b['enrolled_count'] = (int)$enrolled_count;
+            } else {
+                $b['enrolled_count'] = 0;
+            }
+        }
+
+        return $batches;
     }
 
     /**

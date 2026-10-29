@@ -22,8 +22,9 @@ class Dashboard extends API_Controller {
 
         $role = $this->current_user['role'] ?? 'learner';
         $user_id = (int)$this->current_user['id'];
+        $range = $this->input->get('range', TRUE) ?: 'Week';
 
-        $metrics = $this->users->get_dashboard_metrics($role, $user_id);
+        $metrics = $this->users->get_dashboard_metrics($role, $user_id, $range);
 
         return $this->json_response([
             'role'    => $role,

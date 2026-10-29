@@ -246,20 +246,18 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Page entrance animation on navigation */
+/* Page entrance animation on navigation - clean opacity transition without persistent transform containing block */
 @keyframes pageEnter {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 
 .animate-page-enter {
-  animation: pageEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: pageEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Floating dock drop shadow */

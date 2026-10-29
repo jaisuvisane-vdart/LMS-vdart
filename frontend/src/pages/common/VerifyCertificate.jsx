@@ -41,7 +41,7 @@ const VerifyCertificate = () => {
   return (
     <div className="min-h-screen bg-[#F3F6FB] flex flex-col justify-between p-4 sm:p-8 touch-scroll">
       {/* Top Header */}
-      <div className="max-w-3xl mx-auto w-full flex items-center justify-between pb-6">
+      <div className="max-w-3xl mx-auto w-full flex items-center justify-between pb-6" data-aos="fade-down">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 clay-card rounded-2xl shadow-sm flex items-center justify-center p-1.5 border border-white/80">
             <img src={vdartLogo} alt="VDart" className="w-full h-full object-contain" />
@@ -61,7 +61,7 @@ const VerifyCertificate = () => {
       </div>
 
       {/* Main Verification Card */}
-      <div className="max-w-xl mx-auto w-full clay-modal rounded-2xl border border-white/80 p-6 sm:p-10 space-y-6 shadow-2xl">
+      <div className="max-w-xl mx-auto w-full clay-modal rounded-2xl border border-white/80 p-6 sm:p-10 space-y-6 shadow-2xl" data-aos="zoom-in" data-aos-duration="600">
         <div className="text-center space-y-2">
           <div className="w-14 h-14 bg-[#E2E9F4] text-[#1E3B78] rounded-2xl flex items-center justify-center mx-auto mb-2 shadow-inner">
             <ShieldCheck className="w-7 h-7 text-[#2C51A2]" />
@@ -96,6 +96,8 @@ const VerifyCertificate = () => {
 
         {result && (
           <div
+            data-aos="fade-up"
+            data-aos-delay="150"
             className={`p-5 rounded-2xl border text-xs shadow-sm ${
               result.valid
                 ? 'bg-gradient-to-br from-[#EFF6FF] to-[#E2E9F4] border-[#BCD0EC] text-[#172B4D]'

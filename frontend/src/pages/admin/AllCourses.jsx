@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useDialog } from '../../contexts/DialogContext';
 import courseService from '../../services/courseService';
+import enrollmentService from '../../services/enrollmentService';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
@@ -9,7 +10,12 @@ import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
 import ActionMenu from '../../components/common/ActionMenu';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import UnifiedCourseCreator from '../../components/courses/UnifiedCourseCreator';
+import CategoryManagerModal from '../../components/courses/CategoryManagerModal';
+import EnrollmentRequestsTable from '../../components/admin/EnrollmentRequestsTable';
+import categoryService from '../../services/categoryService';
+import { DEFAULT_COURSE_CATEGORIES } from '../../config/taxonomy';
 import {
   BookOpen,
   Plus,
@@ -20,20 +26,70 @@ import {
   Edit3,
   Trash2,
   Users,
-  Filter
+  Filter,
+  FolderTree,
+  UserCheck,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 const AllCourses = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showAlert, showConfirm } = useDialog();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Tab State: 'courses' | 'requests'
+  const [activeTab, setActiveTab] = useState('courses');
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+
+  // Category Manager modal & options
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoriesList, setCategoriesList] = useState(DEFAULT_COURSE_CATEGORIES);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'requests') {
+      setActiveTab('requests');
+    }
+  }, [location.search]);
+
+  const loadPendingCount = async () => {
+    try {
+      const res = await enrollmentService.getPendingCount();
+      if (res.status === 'success') {
+        setPendingRequestsCount(res.data.pending_count);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch pending count:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadPendingCount();
+  }, []);
+
+  const loadCategoryList = async () => {
+    try {
+      const list = await categoryService.getCategories(true);
+      if (Array.isArray(list) && list.length > 0) {
+        setCategoriesList(list);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch categories in AllCourses:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadCategoryList();
+  }, []);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -147,7 +203,7 @@ const AllCourses = () => {
   return (
     <div className="space-y-6">
       {/* Header Banner with Minimal Clay Surface */}
-      <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
@@ -162,15 +218,66 @@ const AllCourses = () => {
             Oversee all training curriculum authored across organizational departments.
           </p>
         </div>
-        <div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="md"
+            icon={FolderTree}
+            onClick={() => setShowCategoryModal(true)}
+          >
+            Manage Categories
+          </Button>
           <Button variant="primary" size="md" icon={Plus} onClick={() => setViewMode('create')}>
             Create New Course
           </Button>
         </div>
       </div>
 
-      {/* Filter Bar with Minimal Clay Surface */}
-      <div className="clay-card p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4">
+      {/* Primary Navigation Tabs */}
+      <div data-aos="fade-up" data-aos-delay="100" className="flex items-center gap-2 border-b border-[#E2E8F0] pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('courses')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-xl ${
+            activeTab === 'courses'
+              ? 'clay-btn-primary text-white shadow-sm'
+              : 'clay-btn-secondary text-[#64748B] hover:text-[#1E3B78]'
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Course Directory</span>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+            activeTab === 'courses' ? 'bg-white/25 text-white' : 'bg-slate-200 text-[#172B4D]'
+          }`}>
+            <AnimatedNumber value={courses.length} />
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('requests')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all rounded-xl relative ${
+            activeTab === 'requests'
+              ? 'clay-btn-primary text-white shadow-sm'
+              : 'clay-btn-secondary text-[#64748B] hover:text-[#1E3B78]'
+          }`}
+        >
+          <UserCheck className="w-4 h-4" />
+          <span>Enrollment Requests</span>
+          {pendingRequestsCount > 0 && (
+            <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-amber-500 text-white animate-pulse">
+              <AnimatedNumber value={pendingRequestsCount} /> Pending
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === 'requests' ? (
+        <EnrollmentRequestsTable onCountChange={setPendingRequestsCount} />
+      ) : (
+        <>
+          {/* Filter Bar with Minimal Clay Surface */}
+          <div data-aos="fade-up" data-aos-delay="150" className="clay-card p-4 rounded-2xl flex flex-col md:flex-row items-center gap-4">
         <form onSubmit={handleSearchSubmit} className="flex-1 w-full flex items-center gap-2">
           <Input
             placeholder="Search courses by title, category, description..."
@@ -218,11 +325,7 @@ const AllCourses = () => {
               placeholder="All Categories"
               options={[
                 { value: '', label: 'All Categories' },
-                { value: 'Software Engineering', label: 'Software Engineering' },
-                { value: 'Frontend Engineering', label: 'Frontend Engineering' },
-                { value: 'Information Security', label: 'Information Security' },
-                { value: 'Corporate Compliance', label: 'Corporate Compliance' },
-                { value: 'Quality Assurance', label: 'Quality Assurance' },
+                ...categoriesList.map((cat) => ({ value: cat, label: cat })),
               ]}
             />
           </div>
@@ -230,7 +333,7 @@ const AllCourses = () => {
       </div>
 
       {/* Courses Data Grid with Minimal Clay Surface */}
-      <div className="clay-card rounded-2xl overflow-hidden">
+      <div data-aos="fade-up" data-aos-delay="200" className="clay-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
           <table className="w-full text-center border-collapse text-xs min-w-[720px]">
             <thead>
@@ -282,6 +385,17 @@ const AllCourses = () => {
                       }`}>
                         {course.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}
                       </span>
+                      <div className="mt-1">
+                        {course.access_type === 'required_admin_access' ? (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> Gated Access
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <Unlock className="w-2.5 h-2.5" /> Open Access
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-left">
                       <div className="font-semibold text-[#172B4D]">{course.instructor_name}</div>
@@ -321,7 +435,7 @@ const AllCourses = () => {
                                 });
                                 return;
                               }
-                              navigate(`/instructor/assignments?courseId=${course.id}&openAssign=1`);
+                              navigate(`/admin/assignments?courseId=${course.id}&openAssign=1`);
                             },
                           },
                           {
@@ -356,6 +470,19 @@ const AllCourses = () => {
           pageSizeOptions={[5, 10, 20, 50]}
         />
       </div>
+      </>
+      )}
+
+      {/* Category Manager Modal */}
+      <CategoryManagerModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onCategoriesUpdated={() => {
+          categoryService.clearCache();
+          loadCategoryList();
+          fetchCourses();
+        }}
+      />
     </div>
   );
 };

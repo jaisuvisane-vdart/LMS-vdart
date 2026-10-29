@@ -4,6 +4,7 @@ import assessmentService from '../../services/assessmentService';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import {
   CheckCircle,
   XCircle,
@@ -84,6 +85,8 @@ const AssessmentResult = () => {
     <div className="space-y-6 w-full">
       {/* Top Banner Outcome */}
       <div
+        data-aos="zoom-in"
+        data-aos-duration="600"
         className={`p-6 sm:p-8 rounded-2xl border shadow-lg ${
           isPassed
             ? 'bg-gradient-to-r from-[#1E3B78] to-[#2C51A2] border-white/10 text-white'
@@ -117,9 +120,11 @@ const AssessmentResult = () => {
           </div>
 
           <div className="text-left md:text-right shrink-0 bg-white/10 p-5 rounded-2xl border border-white/20 backdrop-blur-md shadow-inner">
-            <div className="text-4xl sm:text-5xl font-extrabold tracking-tight">{percentage}%</div>
+            <div className="text-4xl sm:text-5xl font-extrabold tracking-tight">
+              <AnimatedNumber value={percentage} suffix="%" />
+            </div>
             <div className="text-xs text-[#CBD5E1] font-semibold mt-1">
-              {scorecard.total_score} / {scorecard.max_score} Total Marks
+              <AnimatedNumber value={`${scorecard.total_score} / ${scorecard.max_score}`} /> Total Marks
             </div>
           </div>
         </div>
@@ -137,6 +142,8 @@ const AssessmentResult = () => {
           return (
             <div
               key={idx}
+              data-aos="fade-up"
+              data-aos-delay={idx * 60}
               className="clay-card clay-card-hover p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col justify-between"
             >
               <div>
@@ -149,7 +156,7 @@ const AssessmentResult = () => {
                   </div>
                 </div>
                 <div className="text-xl sm:text-2xl font-bold text-[#172B4D] tracking-tight">
-                  {kpi.value}
+                  <AnimatedNumber value={kpi.value} />
                 </div>
               </div>
               <div className="text-[10px] text-[#64748B] font-medium pt-2.5 border-t border-[#E2E8F0]/60 mt-2.5">
@@ -161,7 +168,7 @@ const AssessmentResult = () => {
       </div>
 
       {/* Action Buttons Bar */}
-      <div className="clay-card p-4 rounded-2xl border border-white/60 flex flex-wrap items-center justify-between gap-3">
+      <div data-aos="fade-up" data-aos-delay="200" className="clay-card p-4 rounded-2xl border border-white/60 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -208,7 +215,7 @@ const AssessmentResult = () => {
       </div>
 
       {/* Question Review Section */}
-      <div className="space-y-4">
+      <div data-aos="fade-up" data-aos-delay="250" className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[#1E3B78]">
             Question Review & Answer Key Audit ({scorecard.questions?.length || 0} Items)

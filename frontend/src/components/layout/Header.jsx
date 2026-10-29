@@ -102,42 +102,6 @@ const Header = ({ onToggleSidebar, isSidebarCollapsed }) => {
             {user?.department || 'Employee Learning Management System'}
           </h2>
         </div>
-
-        {/* Administrator Master Perspective Switcher */}
-        {user?.role === 'admin' && (
-          <div className="hidden md:flex items-center p-1 bg-[#F1F5F9] rounded-xl border border-[#CBD5E1]/60 shadow-xs ml-2">
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                location.pathname.startsWith('/admin')
-                  ? 'bg-[#1E3B78] text-white shadow-xs'
-                  : 'text-[#64748B] hover:text-[#1E3B78]'
-              }`}
-            >
-              Admin View
-            </button>
-            <button
-              onClick={() => navigate('/instructor/dashboard')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                location.pathname.startsWith('/instructor')
-                  ? 'bg-[#1E3B78] text-white shadow-xs'
-                  : 'text-[#64748B] hover:text-[#1E3B78]'
-              }`}
-            >
-              Instructor Studio
-            </button>
-            <button
-              onClick={() => navigate('/learner/dashboard')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                location.pathname.startsWith('/learner')
-                  ? 'bg-[#1E3B78] text-white shadow-xs'
-                  : 'text-[#64748B] hover:text-[#1E3B78]'
-              }`}
-            >
-              Learner Experience
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">

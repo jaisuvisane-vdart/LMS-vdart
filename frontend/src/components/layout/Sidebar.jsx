@@ -5,13 +5,15 @@ import {
   LayoutGrid,
   Users,
   BookOpen,
+  Compass,
   FileCheck,
   PieChart,
   Activity,
   Award,
   Settings,
   X,
-  LogOut
+  LogOut,
+  UserCheck
 } from 'lucide-react';
 import vdartLogo from '../../assets/VDart_Logobg.png';
 
@@ -29,6 +31,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
       { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutGrid },
       { name: 'User Directory', path: '/admin/users', icon: Users },
       { name: 'Course Catalog', path: '/admin/courses', icon: BookOpen },
+      { name: 'Trainee Assignments', path: '/admin/assignments', icon: UserCheck },
       { name: 'Reports & Analytics', path: '/admin/reports', icon: PieChart },
       { name: 'System Audit Logs', path: '/admin/audit', icon: Activity },
       { name: 'Portal Settings', path: '/admin/settings', icon: Settings },
@@ -42,6 +45,7 @@ const Sidebar = ({ isCollapsed, isMobileOpen, onCloseMobile }) => {
     ],
     learner: [
       { name: 'My Learning Dashboard', path: '/learner/dashboard', icon: LayoutGrid },
+      { name: 'Course Catalog', path: '/learner/catalog', icon: Compass },
       { name: 'Assigned Courses', path: '/learner/courses', icon: BookOpen },
       { name: 'Assessments', path: '/learner/assessments', icon: FileCheck },
       { name: 'My Certificates', path: '/learner/certificates', icon: Award },

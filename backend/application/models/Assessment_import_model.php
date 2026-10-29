@@ -81,7 +81,6 @@ class Assessment_import_model extends CI_Model {
             // Create new draft assessment
             $assessment_data = [
                 'course_id'          => $course_id,
-                'module_id'          => !empty($config['module_id']) ? (int)$config['module_id'] : null,
                 'title'              => trim($config['title'] ?? 'Imported Assessment - ' . date('M j, Y')),
                 'description'        => trim($config['description'] ?? 'Imported from ' . $session['original_filename']),
                 'passing_percentage' => isset($config['passing_percentage']) ? max(1, min(100, (float)$config['passing_percentage'])) : 70.00,

@@ -132,7 +132,7 @@ const AuditLogs = () => {
     return (
       <div className="space-y-6">
         {/* Top Banner Header with Back Button */}
-        <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
@@ -155,7 +155,7 @@ const AuditLogs = () => {
         </div>
 
         {/* Audit Event Detail Card */}
-        <div className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm space-y-5 w-full">
+        <div data-aos="fade-up" data-aos-delay="150" className="clay-card p-6 sm:p-8 rounded-2xl shadow-sm space-y-5 w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs clay-card p-5 rounded-xl">
             <div>
               <span className="text-[#64748B] font-semibold block">Actor:</span>
@@ -206,7 +206,7 @@ const AuditLogs = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner Header with Minimal Clay Surface */}
-      <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
@@ -229,7 +229,7 @@ const AuditLogs = () => {
       </div>
 
       {/* Filter Toolbar with Minimal Clay Surface */}
-      <div className="clay-card p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3">
+      <div data-aos="fade-up" data-aos-delay="100" className="clay-card p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full md:w-auto flex-1">
           <Select
             value={actionFilter}
@@ -272,7 +272,7 @@ const AuditLogs = () => {
       </div>
 
       {/* Audit Log Table with Minimal Clay Surface */}
-      <div className="clay-card rounded-2xl overflow-hidden">
+      <div data-aos="fade-up" data-aos-delay="150" className="clay-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
           <table className="w-full text-center border-collapse min-w-[760px]">
             <thead>

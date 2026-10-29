@@ -10,6 +10,7 @@ import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
 import ActionMenu from '../../components/common/ActionMenu';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import {
   Award,
   Users,
@@ -159,7 +160,7 @@ const TraineePerformance = () => {
     return (
       <div className="space-y-6">
         {/* Top Banner Header with Back Button */}
-        <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
@@ -300,7 +301,7 @@ const TraineePerformance = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -334,6 +335,8 @@ const TraineePerformance = () => {
           return (
             <div
               key={idx}
+              data-aos="fade-up"
+              data-aos-delay={idx * 60}
               className="clay-card clay-card-hover p-5 rounded-2xl border border-white/60 flex flex-col justify-between"
             >
               <div>
@@ -346,7 +349,7 @@ const TraineePerformance = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-[#172B4D] tracking-tight">
-                  {loading ? '—' : kpi.value}
+                  {loading ? '—' : <AnimatedNumber value={kpi.value} />}
                 </div>
               </div>
               <div className="text-[11px] text-[#64748B] font-medium pt-2.5 border-t border-[#E2E8F0]/60 mt-2.5">
@@ -358,7 +361,7 @@ const TraineePerformance = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="clay-card p-4 rounded-2xl border border-white/60 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div data-aos="fade-up" data-aos-delay="150" className="clay-card p-4 rounded-2xl border border-white/60 flex flex-col md:flex-row items-center justify-between gap-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto flex-1">
           <Select
             value={selectedCourse}
@@ -405,7 +408,7 @@ const TraineePerformance = () => {
       </div>
 
       {/* Attempts Table */}
-      <div className="clay-card rounded-2xl border border-white/60 overflow-hidden">
+      <div data-aos="fade-up" data-aos-delay="200" className="clay-card rounded-2xl border border-white/60 overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
           <table className="w-full text-center border-collapse min-w-[760px]">
             <thead>

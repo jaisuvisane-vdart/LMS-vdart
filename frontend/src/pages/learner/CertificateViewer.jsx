@@ -259,7 +259,7 @@ const CertificateViewer = () => {
   return (
     <div className="space-y-6 w-full pb-12">
       {/* Action Toolbar (Hidden during print) */}
-      <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+      <div data-aos="fade-down" className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <button
           onClick={() => navigate('/learner/certificates')}
           className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1E3B78] hover:text-[#2C51A2] transition-colors"
@@ -325,6 +325,8 @@ const CertificateViewer = () => {
       {/* Official Certificate Canvas */}
       <div
         id="printable-certificate"
+        data-aos="zoom-in"
+        data-aos-duration="600"
         className={`clay-card p-8 sm:p-14 rounded-2xl ${tmpl.outerBorder} shadow-2xl relative overflow-hidden select-none print:border-none print:shadow-none print:p-0 print:rounded-none`}
       >
         {/* Inner Border Frame */}

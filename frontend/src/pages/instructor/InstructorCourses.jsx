@@ -9,7 +9,10 @@ import Input from '../../components/common/Input';
 import Select from '../../components/common/Select';
 import Pagination from '../../components/common/Pagination';
 import ActionMenu from '../../components/common/ActionMenu';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import UnifiedCourseCreator from '../../components/courses/UnifiedCourseCreator';
+import categoryService from '../../services/categoryService';
+import { DEFAULT_COURSE_CATEGORIES } from '../../config/taxonomy';
 import {
   BookOpen,
   Plus,
@@ -22,7 +25,9 @@ import {
   CheckCircle,
   Clock,
   ArrowUpDown,
-  Edit3
+  Edit3,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 const InstructorCourses = () => {
@@ -115,18 +120,24 @@ const InstructorCourses = () => {
     }
   };
 
+  const [allCategories, setAllCategories] = useState(DEFAULT_COURSE_CATEGORIES);
+
+  useEffect(() => {
+    categoryService.getCategories().then((cats) => {
+      if (Array.isArray(cats) && cats.length > 0) {
+        setAllCategories(cats);
+      }
+    }).catch(() => {});
+  }, []);
+
   // Distinct categories available in current courses plus defaults
   const categories = useMemo(() => {
     const set = new Set([
-      'Software Engineering',
-      'Frontend Engineering',
-      'Information Security',
-      'Corporate Compliance',
-      'Quality Assurance',
+      ...allCategories,
       ...courses.map((c) => c.category).filter(Boolean),
     ]);
     return Array.from(set);
-  }, [courses]);
+  }, [allCategories, courses]);
 
   // Status counts
   const totalCount = courses.length;
@@ -214,7 +225,7 @@ const InstructorCourses = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
-      <div className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -237,7 +248,7 @@ const InstructorCourses = () => {
       </div>
 
       {/* Multi-Criteria Filter Bar */}
-      <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 space-y-4">
+      <div data-aos="fade-up" data-aos-delay="100" className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 space-y-4">
         {/* Quick Segment Filter Pills */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E8F0]/60 pb-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -250,7 +261,7 @@ const InstructorCourses = () => {
                   : 'clay-btn-secondary text-[#64748B] hover:text-[#1E3B78]'
               }`}
             >
-              All Courses ({totalCount})
+              All Courses (<AnimatedNumber value={totalCount} />)
             </button>
             <button
               type="button"
@@ -261,7 +272,7 @@ const InstructorCourses = () => {
                   : 'clay-btn-secondary text-[#64748B] hover:text-[#1E3B78]'
               }`}
             >
-              Published ({publishedCount})
+              Published (<AnimatedNumber value={publishedCount} />)
             </button>
             <button
               type="button"
@@ -272,7 +283,7 @@ const InstructorCourses = () => {
                   : 'clay-btn-secondary text-[#64748B] hover:text-[#1E3B78]'
               }`}
             >
-              Drafts ({draftCount})
+              Drafts (<AnimatedNumber value={draftCount} />)
             </button>
           </div>
 
@@ -369,7 +380,7 @@ const InstructorCourses = () => {
       </div>
 
       {/* Courses Data Table */}
-      <div className="clay-card rounded-2xl border border-white/60 overflow-hidden shadow-sm">
+      <div data-aos="fade-up" data-aos-delay="150" className="clay-card rounded-2xl border border-white/60 overflow-hidden shadow-sm">
         <div className="overflow-x-auto touch-scroll">
           <table className="w-full text-center border-collapse text-xs min-w-[840px]">
             <thead>
@@ -443,6 +454,17 @@ const InstructorCourses = () => {
                       }`}>
                         {course.course_type === 'non_certified' ? 'Non-Certified' : 'Certified'}
                       </span>
+                      <div className="mt-1">
+                        {course.access_type === 'required_admin_access' ? (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" /> Gated Access
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                            <Unlock className="w-2.5 h-2.5" /> Open Access
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Structure: Lessons */}

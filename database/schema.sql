@@ -17,7 +17,7 @@ DROP TABLE IF EXISTS lesson_progress;
 DROP TABLE IF EXISTS course_assignments;
 DROP TABLE IF EXISTS lesson_materials;
 DROP TABLE IF EXISTS lessons;
-DROP TABLE IF EXISTS course_modules;
+DROP TABLE IF EXISTS course_categories;
 DROP TABLE IF EXISTS courses;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS roles;
@@ -44,15 +44,20 @@ CREATE TABLE roles (
 CREATE TABLE users (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     role_id INT UNSIGNED NOT NULL,
+    learner_type ENUM('trainee', 'recruiter') NULL DEFAULT NULL,
     employee_id VARCHAR(50) NOT NULL UNIQUE,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(191) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     department VARCHAR(100) NULL,
+    batch VARCHAR(100) NULL DEFAULT NULL,
     designation VARCHAR(100) NULL,
     phone VARCHAR(20) NULL,
     status ENUM('active', 'inactive', 'suspended') NOT NULL DEFAULT 'active',
+    sync_source ENUM('manual', 'google_sheet') NOT NULL DEFAULT 'manual',
+    google_sheet_row_id VARCHAR(100) NULL DEFAULT NULL,
+    last_synced_at DATETIME NULL DEFAULT NULL,
     is_first_login TINYINT(1) NOT NULL DEFAULT 1,
     avatar_url VARCHAR(255) NULL,
     last_login_at DATETIME NULL,
@@ -60,8 +65,22 @@ CREATE TABLE users (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles (id) ON UPDATE CASCADE,
     INDEX idx_users_role (role_id),
+    INDEX idx_users_learner_type (learner_type),
+    INDEX idx_users_batch (batch),
     INDEX idx_users_status (status),
     INDEX idx_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------------------------
+-- 2.5 COURSE CATEGORIES TABLE
+-- Master repository of curriculum categories
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS course_categories (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
@@ -73,6 +92,7 @@ CREATE TABLE courses (
     instructor_id INT UNSIGNED NOT NULL,
     category VARCHAR(100) NOT NULL,
     course_type ENUM('certified', 'non_certified') NOT NULL DEFAULT 'certified',
+    access_type ENUM('open_enrollment', 'required_admin_access') NOT NULL DEFAULT 'open_enrollment',
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT NULL,
@@ -92,29 +112,12 @@ CREATE TABLE courses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
--- 4. COURSE MODULES TABLE
--- Structural chapters/sections grouping lessons within a course
--- ------------------------------------------------------------------------------
-CREATE TABLE course_modules (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    course_id INT UNSIGNED NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NULL,
-    order_index INT UNSIGNED NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_modules_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    INDEX idx_modules_course (course_id, order_index)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ------------------------------------------------------------------------------
--- 5. LESSONS TABLE
+-- 4. LESSONS TABLE
 -- Granular training units containing instructions, text, video, or documents
 -- ------------------------------------------------------------------------------
 CREATE TABLE lessons (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     course_id INT UNSIGNED NOT NULL,
-    module_id INT UNSIGNED NULL,
     title VARCHAR(255) NOT NULL,
     content LONGTEXT NULL,
     lesson_type VARCHAR(50) NOT NULL DEFAULT 'text',
@@ -125,9 +128,7 @@ CREATE TABLE lessons (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_lessons_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT fk_lessons_module FOREIGN KEY (module_id) REFERENCES course_modules (id) ON DELETE SET NULL ON UPDATE CASCADE,
-    INDEX idx_lessons_course (course_id, order_index),
-    INDEX idx_lessons_module (module_id, order_index)
+    INDEX idx_lessons_course (course_id, order_index)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
@@ -197,13 +198,12 @@ CREATE TABLE lesson_progress (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
--- 9. ASSESSMENTS TABLE
--- Quizzes and final exams configured for specific courses or modules
+-- 8. ASSESSMENTS TABLE
+-- Quizzes and final exams configured for specific courses
 -- ------------------------------------------------------------------------------
 CREATE TABLE assessments (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     course_id INT UNSIGNED NOT NULL,
-    module_id INT UNSIGNED NULL,
     title VARCHAR(255) NOT NULL,
     description TEXT NULL,
     passing_percentage DECIMAL(5,2) NOT NULL DEFAULT 70.00,
@@ -214,7 +214,6 @@ CREATE TABLE assessments (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_assessments_course FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT fk_assessments_module FOREIGN KEY (module_id) REFERENCES course_modules (id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_assessments_course (course_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -407,6 +406,26 @@ CREATE TABLE IF NOT EXISTS user_otps (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
+-- 19. GOOGLE SHEET SYNC CONFIGS TABLE
+-- Stores Google Spreadsheet synchronization parameters for trainees and recruiters
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS google_sheet_sync_configs (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    sheet_type ENUM('trainees', 'recruiters') NOT NULL UNIQUE,
+    spreadsheet_id VARCHAR(255) NOT NULL DEFAULT '',
+    sheet_tab_name VARCHAR(100) NOT NULL DEFAULT '',
+    id_header_name VARCHAR(50) NOT NULL DEFAULT 'Employee ID',
+    auto_sync_enabled TINYINT(1) NOT NULL DEFAULT 1,
+    sync_interval_minutes INT UNSIGNED NOT NULL DEFAULT 15,
+    last_synced_at DATETIME NULL,
+    sync_status ENUM('idle', 'syncing', 'success', 'error') NOT NULL DEFAULT 'idle',
+    sync_message TEXT NULL,
+    webhook_secret VARCHAR(64) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------------------------
 -- DEFAULT SEED DATA
 -- Baseline roles and master administrator account
 -- Initial admin credentials: admin@vdartinc.com / Admin@123
@@ -418,6 +437,23 @@ INSERT INTO roles (id, name, display_name, description) VALUES
 (3, 'learner', 'Learner', 'Access assigned courses, study lessons, complete materials, and take assessments');
 
 INSERT INTO users (id, role_id, employee_id, first_name, last_name, email, password_hash, department, designation, phone, status) VALUES
-(1, 1, 'EMP001', 'System', 'Admin', 'admin@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Information Technology', 'LMS Administrator', '+1-555-0100', 'active'),
-(2, 2, 'EMP002', 'Sarah', 'Jenkins', 'instructor@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Engineering Training', 'Lead Technical Trainer', '+1-555-0101', 'active'),
-(3, 3, 'EMP003', 'Alex', 'Morgan', 'learner@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Software Development', 'Graduate Trainee', '+1-555-0102', 'active');
+(1, 1, 'EMP001', 'System', 'Admin', 'admin@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Corporate Functions', 'LMS Administrator', '+1-555-0100', 'active'),
+(2, 2, 'EMP002', 'Sarah', 'Jenkins', 'instructor@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Corporate Functions', 'Lead Technical Trainer', '+1-555-0101', 'active'),
+(3, 3, 'EMP003', 'Alex', 'Morgan', 'learner@vdartinc.com', '$2y$10$wT0lPZvZBgn/Y3R8b4h42eA.s743j2L73dsk.b.8xV0p6rZkyXG2S', 'Recruitment', 'Graduate Trainee', '+1-555-0102', 'active');
+
+INSERT INTO course_categories (name) VALUES
+('Fresher Training Program'),
+('Lateral Training Program'),
+('Continuous Learning Program'),
+('Refresher Training Program'),
+('ISMS'),
+('EHS'),
+('Assessment – Fresher'),
+('Assessment – Lateral'),
+('Assessment – Sourcing'),
+('CEIPAL'),
+('LinkedIn'),
+('Communication'),
+('Soft Skill'),
+('Leadership'),
+('Marketing');

@@ -12,7 +12,6 @@ class Courses extends API_Controller {
     public function __construct() {
         parent::__construct();
         $this->load->model('Course_model', 'courses');
-        $this->load->model('Module_model', 'modules');
         $this->load->model('Lesson_model', 'lessons');
     }
 
@@ -96,6 +95,11 @@ class Courses extends API_Controller {
         $user_id = (int)$this->current_user['id'];
         $role = $this->current_user['role'] ?? 'instructor';
 
+        $access_type = strtolower(trim($input['access_type'] ?? 'open_enrollment'));
+        if (!in_array($access_type, ['open_enrollment', 'required_admin_access'], true)) {
+            $access_type = 'open_enrollment';
+        }
+
         // Admin can optionally assign a course to another instructor
         $instructor_id = ($role === 'admin' && !empty($input['instructor_id']))
             ? (int)$input['instructor_id']
@@ -106,6 +110,7 @@ class Courses extends API_Controller {
             'title'                      => $title,
             'category'                   => $category,
             'course_type'                => $course_type,
+            'access_type'                => $access_type,
             'description'                => trim($input['description'] ?? ''),
             'thumbnail_url'              => trim($input['thumbnail_url'] ?? ''),
             'status'                     => 'draft',
@@ -205,6 +210,12 @@ class Courses extends API_Controller {
             $course_type = strtolower(trim($input['course_type']));
             if (in_array($course_type, ['certified', 'non_certified'], true)) {
                 $update_data['course_type'] = $course_type;
+            }
+        }
+        if (isset($input['access_type'])) {
+            $access_type = strtolower(trim($input['access_type']));
+            if (in_array($access_type, ['open_enrollment', 'required_admin_access'], true)) {
+                $update_data['access_type'] = $access_type;
             }
         }
         if (isset($input['description'])) $update_data['description'] = trim($input['description']);

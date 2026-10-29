@@ -352,7 +352,7 @@ const ExamRunner = () => {
   return (
     <div className="space-y-6">
       {/* Top Test Control Header Bar */}
-      <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-20">
+      <div data-aos="fade-down" className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-16 z-20">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -402,7 +402,7 @@ const ExamRunner = () => {
       {/* Main Examination Layout: 2 Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         {/* Left 1 Col: Question Navigation Palette */}
-        <div className="lg:col-span-1 space-y-4">
+        <div data-aos="fade-right" data-aos-delay="100" className="lg:col-span-1 space-y-4">
           <Card title="Question Palette">
             <div className="space-y-4">
               <div className="grid grid-cols-5 gap-2">
@@ -456,7 +456,7 @@ const ExamRunner = () => {
         </div>
 
         {/* Right 3 Cols: Active Question Display */}
-        <div className="lg:col-span-3 space-y-6">
+        <div data-aos="fade-left" data-aos-delay="100" className="lg:col-span-3 space-y-6">
           {currentQ ? (
             <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 space-y-6">
               {/* Question Header */}

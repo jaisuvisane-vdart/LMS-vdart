@@ -56,8 +56,6 @@ class Lesson_model extends CI_Model {
         if (!isset($data['order_index'])) {
             if (!empty($data['course_id'])) {
                 $this->db->where('course_id', $data['course_id']);
-            } elseif (!empty($data['module_id'])) {
-                $this->db->where('module_id', $data['module_id']);
             }
             $current_max = $this->db->select_max('order_index')->get('lessons')->row_array();
             $data['order_index'] = (int)($current_max['order_index'] ?? 0) + 1;

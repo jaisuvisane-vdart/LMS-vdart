@@ -7,6 +7,7 @@ import Button from '../../components/common/Button';
 import ProgressBar from '../../components/common/ProgressBar';
 import Input from '../../components/common/Input';
 import Pagination from '../../components/common/Pagination';
+import AnimatedNumber from '../../components/common/AnimatedNumber';
 import {
   BarChart3,
   Download,
@@ -155,7 +156,7 @@ const ReportsAnalytics = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner Header with Minimal Clay Surface */}
-      <div className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 sm:p-7 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-extrabold uppercase tracking-wider bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full clay-pill">
@@ -189,6 +190,8 @@ const ReportsAnalytics = () => {
           return (
             <div
               key={idx}
+              data-aos="fade-up"
+              data-aos-delay={idx * 60}
               className={`clay-card p-5 rounded-2xl clay-card-hover flex flex-col justify-between ${kpi.accent}`}
             >
               <div>
@@ -207,7 +210,7 @@ const ReportsAnalytics = () => {
                   </div>
                 </div>
                 <div className="text-2xl font-extrabold text-[#172B4D] tracking-tight font-mono">
-                  {loading ? '—' : kpi.value}
+                  {loading ? '—' : <AnimatedNumber value={kpi.value} />}
                 </div>
               </div>
               <div className="text-[10px] text-[#64748B] font-semibold pt-2 border-t border-[#F1F5F9] mt-2">
@@ -219,7 +222,7 @@ const ReportsAnalytics = () => {
       </div>
 
       {/* View Switcher Tabs and Search Bar with Minimal Clay Surface */}
-      <div className="clay-card p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div data-aos="fade-up" data-aos-delay="150" className="clay-card p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 border-b sm:border-b-0 pb-2 sm:pb-0 w-full sm:w-auto">
           {[
             { id: 'courses', label: 'Course Curriculum', icon: BookOpen },
@@ -256,7 +259,7 @@ const ReportsAnalytics = () => {
       </div>
 
       {/* Main Report Table Container with Minimal Clay Surface */}
-      <div className="clay-card rounded-2xl overflow-hidden">
+      <div data-aos="fade-up" data-aos-delay="200" className="clay-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto touch-scroll">
           {/* TAB 1: Courses Analytics Table */}
           {activeTab === 'courses' && (

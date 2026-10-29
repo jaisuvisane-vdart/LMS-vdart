@@ -12,7 +12,6 @@ class Lessons extends API_Controller {
     public function __construct() {
         parent::__construct();
         $this->load->model('Course_model', 'courses');
-        $this->load->model('Module_model', 'modules');
         $this->load->model('Lesson_model', 'lessons');
     }
 
@@ -70,7 +69,6 @@ class Lessons extends API_Controller {
 
         $lesson_id = $this->lessons->create([
             'course_id'        => (int)$course_id,
-            'module_id'        => !empty($input['module_id']) ? (int)$input['module_id'] : null,
             'title'            => $title,
             'content'          => $input['content'] ?? '',
             'lesson_type'      => $lesson_type,

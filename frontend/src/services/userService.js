@@ -13,6 +13,11 @@ export const userService = {
   getUserDetails: (id) => api.get(`/users/${id}/details`),
   adminCompleteCourse: (assignmentId) => api.post(`/course-assignments/${assignmentId}/admin-complete`),
   adminResetCourseCompletion: (assignmentId) => api.post(`/course-assignments/${assignmentId}/admin-reset`),
+  getBatches: () => api.get('/users/batches'),
+  syncGoogleSheets: (sheetType = null) => api.post('/google-sheets/sync', { sheet_type: sheetType }),
+  getGoogleSheetsStatus: () => api.get('/google-sheets/status'),
+  getGoogleSheetsConfig: () => api.get('/google-sheets/config'),
+  updateGoogleSheetsConfig: (data) => api.put('/google-sheets/config', data),
 };
 
 export default userService;

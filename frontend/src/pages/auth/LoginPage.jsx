@@ -444,7 +444,7 @@ const LoginPage = () => {
         {/* Left Column: Brand & Value Proposition Showcase */}
         <div className="lg:col-span-7 xl:col-span-7 flex flex-col justify-between space-y-6 xl:space-y-8">
           {/* Brand Header */}
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-center gap-3.5" data-aos="fade-down">
             <div className="w-14 h-14 clay-card rounded-2xl flex items-center justify-center p-2.5 border border-white/80 shadow-md">
               <img
                 src={vdartLogo}
@@ -464,7 +464,7 @@ const LoginPage = () => {
           </div>
 
           {/* Main Hero Headline */}
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-3 sm:space-y-4" data-aos="fade-up" data-aos-delay="100">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black text-[#172B4D] leading-[1.12] tracking-tight">
               Enterprise Knowledge <br className="hidden sm:inline" />
               <span className="text-[#2C51A2]">Engineered for Growth</span>
@@ -477,7 +477,7 @@ const LoginPage = () => {
           {/* 4 Feature Highlights */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 sm:gap-4 pt-1 w-full max-w-2xl xl:max-w-3xl">
             {/* 1. Online Courses */}
-            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2">
+            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2" data-aos="fade-up" data-aos-delay="200">
               <div className="w-10 h-10 bg-[#E2E9F4] text-[#2C51A2] rounded-xl flex items-center justify-center shrink-0 shadow-inner">
                 <BookOpen className="w-5 h-5 text-[#2C51A2]" />
               </div>
@@ -488,7 +488,7 @@ const LoginPage = () => {
             </div>
 
             {/* 2. Track Progress */}
-            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2">
+            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2" data-aos="fade-up" data-aos-delay="250">
               <div className="w-10 h-10 bg-[#E2E9F4] text-[#2C51A2] rounded-xl flex items-center justify-center shrink-0 shadow-inner">
                 <TrendingUp className="w-5 h-5 text-[#2C51A2]" />
               </div>
@@ -499,7 +499,7 @@ const LoginPage = () => {
             </div>
 
             {/* 3. Get Certified */}
-            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2">
+            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2" data-aos="fade-up" data-aos-delay="300">
               <div className="w-10 h-10 bg-[#F3E8FF] text-[#7E22CE] rounded-xl flex items-center justify-center shrink-0 shadow-inner">
                 <Award className="w-5 h-5 text-[#7E22CE]" />
               </div>
@@ -510,7 +510,7 @@ const LoginPage = () => {
             </div>
 
             {/* 4. Learn Together */}
-            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2">
+            <div className="clay-card p-4 rounded-2xl border border-white/80 space-y-2" data-aos="fade-up" data-aos-delay="350">
               <div className="w-10 h-10 bg-[#FEF3C7] text-[#D97706] rounded-xl flex items-center justify-center shrink-0 shadow-inner">
                 <Users className="w-5 h-5 text-[#D97706]" />
               </div>
@@ -522,7 +522,7 @@ const LoginPage = () => {
           </div>
 
           {/* Bottom Security Tags */}
-          <div className="pt-2 flex flex-wrap items-center gap-2.5 w-full max-w-2xl xl:max-w-3xl">
+          <div className="pt-2 flex flex-wrap items-center gap-2.5 w-full max-w-2xl xl:max-w-3xl" data-aos="fade-up" data-aos-delay="400">
             <span className="clay-pill bg-[#2C51A2] text-white px-4 py-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider rounded-full shadow-sm">
               Enterprise Grade
             </span>
@@ -536,7 +536,7 @@ const LoginPage = () => {
         </div>
 
         {/* Right Column: Authentication Card */}
-        <div className="lg:col-span-5 xl:col-span-5 w-full flex justify-center lg:justify-end">
+        <div className="lg:col-span-5 xl:col-span-5 w-full flex justify-center lg:justify-end" data-aos="fade-left" data-aos-delay="200">
           <div className="clay-modal rounded-2xl border border-white/80 p-7 sm:p-9 xl:p-10 space-y-5 shadow-2xl w-full max-w-lg sm:max-w-xl lg:max-w-[560px] xl:max-w-[600px]">
             {flowStep === 'otp' ? (
               // Step 2: 6-Digit Email OTP Verification Screen

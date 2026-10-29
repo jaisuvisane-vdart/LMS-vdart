@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@number-flow/react": "^0.6.2",
+    "aos": "^2.3.4",
     "axios": "^1.20.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

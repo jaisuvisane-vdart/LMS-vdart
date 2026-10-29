@@ -23,15 +23,43 @@ class Users extends API_Controller {
     public function index() {
         $this->require_role(['admin']);
 
+        // Automated Periodic Synchronization:
+        // Automatically sync from Google Sheets if never synced or if more than 5 minutes have elapsed
+        $this->load->model('Google_sheet_model', 'sheets');
+        $sheet_config = $this->sheets->get_config('trainees');
+        if (!empty($sheet_config['spreadsheet_id'])) {
+            $last_time = !empty($sheet_config['last_synced_at']) ? strtotime($sheet_config['last_synced_at']) : 0;
+            $interval = 300; // 5 minutes interval
+            if ((time() - $last_time) > $interval) {
+                try {
+                    $this->sheets->sync();
+                } catch (Throwable $e) {
+                    log_message('error', 'Auto sync failed in Users controller: ' . $e->getMessage());
+                }
+            }
+        }
+
         $filters = [
-            'role_id'    => $this->input->get('role_id', TRUE),
-            'status'     => $this->input->get('status', TRUE),
-            'department' => $this->input->get('department', TRUE),
-            'search'     => $this->input->get('search', TRUE),
+            'role_id'      => $this->input->get('role_id', TRUE),
+            'learner_type' => $this->input->get('learner_type', TRUE),
+            'batch'        => $this->input->get('batch', TRUE),
+            'status'       => $this->input->get('status', TRUE),
+            'department'   => $this->input->get('department', TRUE),
+            'search'       => $this->input->get('search', TRUE),
         ];
 
         $list = $this->users->get_all_users($filters);
         return $this->json_response($list, 'Users directory retrieved successfully.');
+    }
+
+    /**
+     * GET /api/users/batches
+     * List distinct trainee batches
+     */
+    public function batches() {
+        $this->require_role(['admin', 'instructor']);
+        $batches = $this->users->get_all_batches();
+        return $this->json_response($batches, 'Batches retrieved successfully.');
     }
 
     /**
@@ -65,15 +93,26 @@ class Users extends API_Controller {
         $this->require_role(['admin']);
 
         $input = $this->get_json_input();
+
+        // Handle unified name input if supplied
+        if (!empty($input['name'])) {
+            $parts = preg_split('/\s+/', trim($input['name']), 2);
+            $first_name = $parts[0];
+            $last_name = isset($parts[1]) ? $parts[1] : '';
+            $input['first_name'] = $first_name;
+            $input['last_name'] = $last_name;
+        } else {
+            $first_name = trim($input['first_name'] ?? '');
+            $last_name = trim($input['last_name'] ?? '');
+        }
+
         $email = strtolower(trim($input['email'] ?? ''));
-        $first_name = trim($input['first_name'] ?? '');
-        $last_name = trim($input['last_name'] ?? '');
         $password = !empty($input['password']) ? $input['password'] : 'Welcome@123';
         $input['password'] = $password;
         $role_id = (int)($input['role_id'] ?? 3);
 
-        if (empty($email) || empty($first_name) || empty($last_name)) {
-            return $this->error_response('First name, last name, and email are required.', 422);
+        if (empty($email) || empty($first_name)) {
+            return $this->error_response('Name and email are required.', 422);
         }
 
         if ($this->users->email_exists($email)) {
@@ -84,13 +123,14 @@ class Users extends API_Controller {
         $new_user = $this->users->get_by_id($user_id);
 
         // Audit log
+        $fullName = trim("$first_name $last_name");
         $this->audit->log(
             $this->current_user['id'],
             'USER_CREATED',
             'users',
             $user_id,
             null,
-            ['email' => $email, 'role_id' => $role_id, 'name' => "$first_name $last_name"]
+            ['email' => $email, 'role_id' => $role_id, 'name' => $fullName]
         );
 
         return $this->json_response($new_user, 'User account created successfully.', 201);
@@ -110,6 +150,14 @@ class Users extends API_Controller {
         }
 
         $input = $this->get_json_input();
+
+        // Handle unified name input if supplied
+        if (!empty($input['name'])) {
+            $parts = preg_split('/\s+/', trim($input['name']), 2);
+            $input['first_name'] = $parts[0];
+            $input['last_name'] = isset($parts[1]) ? $parts[1] : '';
+        }
+
         if (!empty($input['email']) && strtolower(trim($input['email'])) !== strtolower($existing['email'])) {
             if ($this->users->email_exists($input['email'], $id)) {
                 return $this->error_response('Email address is already in use by another account.', 409);
@@ -206,7 +254,7 @@ class Users extends API_Controller {
 
     /**
      * GET /api/users/{id}/details
-     * Comprehensive learner dossier: profile details, registered courses, completed courses, and certifications
+     * Comprehensive learner details: profile details, registered courses, completed courses, and certifications
      */
     public function learner_details($id = null) {
         $this->require_role(['admin']);
@@ -219,9 +267,13 @@ class Users extends API_Controller {
 
         $this->load->model('Assignment_model', 'assignments');
         $this->load->model('Certificate_model', 'certificates');
+        $this->load->model('Assessment_model', 'assessments');
+        $this->load->model('Audit_model', 'audits');
 
         $courses = $this->assignments->get_learner_assignments($id);
         $certificates = $this->certificates->get_learner_certificates($id);
+        $assessments = $this->assessments->get_learner_assessments($id);
+        $activity_logs = $this->audits->get_logs(['user_id' => $id], 50);
 
         $completed_count = 0;
         $pending_count = 0;
@@ -238,13 +290,68 @@ class Users extends API_Controller {
             'completed_courses'  => $completed_count,
             'pending_courses'    => $pending_count,
             'total_certificates' => count($certificates),
+            'total_assessments'  => count($assessments),
         ];
 
+        // Consolidated chronological training completion timeline
+        $timeline = [];
+        foreach ($courses as $c) {
+            if (!empty($c['assigned_at'])) {
+                $timeline[] = [
+                    'date'        => date('M d, Y', strtotime($c['assigned_at'])),
+                    'raw_date'    => $c['assigned_at'],
+                    'status'      => 'Enrolled',
+                    'title'       => $c['course_title'],
+                    'type'        => 'course',
+                ];
+            }
+            if (!empty($c['completed_at'])) {
+                $timeline[] = [
+                    'date'        => date('M d, Y', strtotime($c['completed_at'])),
+                    'raw_date'    => $c['completed_at'],
+                    'status'      => 'Completed',
+                    'title'       => $c['course_title'],
+                    'type'        => 'course',
+                ];
+            }
+        }
+
+        foreach ($certificates as $cert) {
+            if (!empty($cert['issued_at'])) {
+                $timeline[] = [
+                    'date'        => date('M d, Y', strtotime($cert['issued_at'])),
+                    'raw_date'    => $cert['issued_at'],
+                    'status'      => 'Completed',
+                    'title'       => $cert['course_title'] . ' (Certificate Awarded)',
+                    'type'        => 'certificate',
+                ];
+            }
+        }
+
+        foreach ($assessments as $a) {
+            if (!empty($a['last_attempted_at'])) {
+                $timeline[] = [
+                    'date'        => date('M d, Y', strtotime($a['last_attempted_at'])),
+                    'raw_date'    => $a['last_attempted_at'],
+                    'status'      => !empty($a['is_passed']) ? 'Completed' : 'Failed',
+                    'title'       => $a['title'] . ' (Score: ' . round($a['highest_score']) . '%)',
+                    'type'        => 'assessment',
+                ];
+            }
+        }
+
+        usort($timeline, function($a, $b) {
+            return strtotime($b['raw_date']) - strtotime($a['raw_date']);
+        });
+
         return $this->json_response([
-            'user'         => $user,
-            'courses'      => $courses,
-            'certificates' => $certificates,
-            'stats'        => $stats,
-        ], 'Learner dossier retrieved successfully.');
+            'user'          => $user,
+            'courses'       => $courses,
+            'certificates'  => $certificates,
+            'assessments'   => $assessments,
+            'activity_logs' => $activity_logs,
+            'timeline'      => $timeline,
+            'stats'         => $stats,
+        ], 'Learner details retrieved successfully.');
     }
 }

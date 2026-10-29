@@ -3,6 +3,8 @@ import { useDialog } from '../../contexts/DialogContext';
 import courseService from '../../services/courseService';
 import assessmentService from '../../services/assessmentService';
 import { downloadBlobFile } from '../../utils/downloadHelper';
+import categoryService from '../../services/categoryService';
+import { DEFAULT_COURSE_CATEGORIES } from '../../config/taxonomy';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Select from '../common/Select';
@@ -122,7 +124,7 @@ export const LESSON_TYPES = [
 export default function UnifiedCourseCreator({ courseId = null, onCancel, onSuccess }) {
   const { showAlert } = useDialog();
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [activeSection, setActiveSection] = useState('section-fundamentals');
   const [submitting, setSubmitting] = useState(false);
   const [submitStatusText, setSubmitStatusText] = useState('');
   const [loadingInitialData, setLoadingInitialData] = useState(Boolean(courseId));
@@ -132,14 +134,42 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
   // Step 1: Course Fundamentals & Duration
   const [courseForm, setCourseForm] = useState({
     title: '',
-    category: 'Software Engineering',
+    category: 'Fresher Training Program',
     course_type: 'certified',
+    access_type: 'open_enrollment',
     duration_days: 30,
     estimated_duration_minutes: 60,
     passing_percentage: 70,
     description: '',
     certificate_template: 'classic',
   });
+
+  const [categoryOptions, setCategoryOptions] = useState(DEFAULT_COURSE_CATEGORIES);
+
+  useEffect(() => {
+    let isMounted = true;
+    categoryService.getCategories().then((cats) => {
+      if (isMounted && Array.isArray(cats) && cats.length > 0) {
+        setCategoryOptions(cats);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleCreateCategoryInDropdown = async (newCategoryName) => {
+    try {
+      const created = await categoryService.createCategory(newCategoryName);
+      setCategoryOptions((prev) => (prev.includes(created) ? prev : [...prev, created]));
+      return created;
+    } catch (err) {
+      showAlert({
+        title: 'Category Creation Error',
+        message: err.message || 'Failed to create category.',
+        type: 'error',
+      });
+      throw err;
+    }
+  };
 
   // Step 2: Lessons List
   const [lessons, setLessons] = useState([]);
@@ -168,8 +198,9 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
           const c = res.data;
           setCourseForm({
             title: c.title || '',
-            category: c.category || 'Software Engineering',
+            category: c.category || 'Fresher Training Program',
             course_type: c.course_type || 'certified',
+            access_type: c.access_type || 'open_enrollment',
             duration_days: parseInt(c.duration_days, 10) || 30,
             estimated_duration_minutes: parseInt(c.estimated_duration_minutes, 10) || 60,
             passing_percentage: parseFloat(c.passing_percentage) || 70,
@@ -512,76 +543,103 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
   };
 
   // ----------------------------------------------------
-  // Step Navigation Validation
+  // Section Navigation & Scroll Spy
   // ----------------------------------------------------
-  const handleNextStep = () => {
-    if (currentStep === 1) {
-      if (!courseForm.title.trim()) {
-        showAlert({
-          title: 'Validation Error',
-          message: 'Please provide a valid Course Title.',
-          type: 'error',
-        });
-        return;
+  const scrollToSection = (sectionId) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveSection(sectionId);
+    }
+  };
+
+  useEffect(() => {
+    const sectionIds = ['section-fundamentals', 'section-lessons'];
+    if (courseForm.course_type === 'certified') {
+      sectionIds.push('section-quiz', 'section-certificate');
+    }
+
+    const handleScroll = () => {
+      const scrollPos = window.scrollY + 200;
+      for (let i = sectionIds.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sectionIds[i]);
+        if (el) {
+          const top = el.getBoundingClientRect().top + window.scrollY;
+          if (top <= scrollPos) {
+            setActiveSection(sectionIds[i]);
+            break;
+          }
+        }
       }
-      if (!courseForm.duration_days || courseForm.duration_days < 1) {
-        showAlert({
-          title: 'Validation Error',
-          message: 'Please enter a valid course duration in days (minimum 1 day).',
-          type: 'error',
-        });
-        return;
-      }
-      setCurrentStep(2);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [courseForm.course_type]);
+
+  // Section completion checks
+  const isSectionComplete = (stepNum) => {
+    if (stepNum === 1) return Boolean(courseForm.title.trim() && courseForm.duration_days > 0);
+    if (stepNum === 2) return lessons.length > 0 && lessons.every((l) => l.title?.trim());
+    if (stepNum === 3) return quizForm.questions.length > 0 && Boolean(quizForm.title?.trim());
+    if (stepNum === 4) return Boolean(courseForm.certificate_template);
+    return false;
+  };
+
+  // ----------------------------------------------------
+  // Unified Form Validation & Final Submission Trigger
+  // ----------------------------------------------------
+  const handleValidateAndSubmit = () => {
+    // 1. Fundamentals Validation
+    if (!courseForm.title.trim()) {
+      showAlert({
+        title: 'Validation Error',
+        message: 'Please provide a valid Course Title.',
+        type: 'error',
+      });
+      scrollToSection('section-fundamentals');
+      return;
+    }
+    if (!courseForm.duration_days || courseForm.duration_days < 1) {
+      showAlert({
+        title: 'Validation Error',
+        message: 'Please enter a valid course duration in days (minimum 1 day).',
+        type: 'error',
+      });
+      scrollToSection('section-fundamentals');
       return;
     }
 
-    if (currentStep === 2) {
-      if (lessons.length === 0) {
-        showAlert({
-          title: 'Validation Notice',
-          message: 'Please add at least one lesson unit before continuing to the next step.',
-          type: 'warning',
-        });
-        return;
-      }
-
-      for (let i = 0; i < lessons.length; i++) {
-        if (!lessons[i].title.trim()) {
-          showAlert({
-            title: 'Validation Error',
-            message: `Lesson ${i + 1} requires a valid title.`,
-            type: 'error',
-          });
-          return;
-        }
-      }
-
-      if (courseForm.course_type === 'certified') {
-        // Prepare default quiz title if empty
-        if (!quizForm.title) {
-          setQuizForm((prev) => ({
-            ...prev,
-            title: `${courseForm.title} - Final Certification Examination`,
-            passing_percentage: courseForm.passing_percentage,
-          }));
-        }
-        setCurrentStep(3);
-      } else {
-        // Non-certified skips quiz and template
-        handleFinalSubmit();
-      }
+    // 2. Lessons Validation
+    if (lessons.length === 0) {
+      showAlert({
+        title: 'Validation Notice',
+        message: 'Please add at least one lesson unit before saving the curriculum.',
+        type: 'warning',
+      });
+      scrollToSection('section-lessons');
       return;
     }
 
-    if (currentStep === 3) {
+    for (let i = 0; i < lessons.length; i++) {
+      if (!lessons[i].title.trim()) {
+        showAlert({
+          title: 'Validation Error',
+          message: `Lesson ${i + 1} requires a valid title.`,
+          type: 'error',
+        });
+        scrollToSection('section-lessons');
+        return;
+      }
+    }
+
+    // 3. Quiz Validation (if certified)
+    if (courseForm.course_type === 'certified') {
       if (!quizForm.title.trim()) {
-        showAlert({
-          title: 'Validation Error',
-          message: 'Please provide an assessment title for the certification quiz.',
-          type: 'error',
-        });
-        return;
+        setQuizForm((prev) => ({
+          ...prev,
+          title: `${courseForm.title} - Final Certification Examination`,
+        }));
       }
       if (quizForm.questions.length === 0) {
         showAlert({
@@ -589,6 +647,7 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
           message: 'Please add at least one question or upload a Word (.docx) / PDF quiz template to formulate examination questions.',
           type: 'warning',
         });
+        scrollToSection('section-quiz');
         return;
       }
       for (let i = 0; i < quizForm.questions.length; i++) {
@@ -599,6 +658,7 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
             message: `Question ${i + 1} cannot have an empty question prompt.`,
             type: 'error',
           });
+          scrollToSection('section-quiz');
           return;
         }
         const hasValidOption = q.options.some((o) => o.option_text.trim());
@@ -608,16 +668,13 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
             message: `Question ${i + 1} must have at least one valid option answer.`,
             type: 'error',
           });
+          scrollToSection('section-quiz');
           return;
         }
       }
-      setCurrentStep(4);
-      return;
     }
 
-    if (currentStep === 4) {
-      handleFinalSubmit();
-    }
+    handleFinalSubmit();
   };
 
   // ----------------------------------------------------
@@ -633,6 +690,7 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
         title: courseForm.title.trim(),
         category: courseForm.category,
         course_type: courseForm.course_type,
+        access_type: courseForm.access_type || 'open_enrollment',
         duration_days: parseInt(courseForm.duration_days, 10) || 30,
         estimated_duration_minutes: parseInt(courseForm.estimated_duration_minutes, 10) || 60,
         passing_percentage: parseFloat(courseForm.passing_percentage) || 70,
@@ -745,29 +803,31 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
     }
   };
 
-  const totalSteps = courseForm.course_type === 'certified' ? 4 : 2;
-
   const STEPS = [
     {
       step: 1,
+      id: 'section-fundamentals',
       title: 'Fundamentals & Days',
       subtitle: 'Course specifications and duration',
       requiresCertified: false,
     },
     {
       step: 2,
+      id: 'section-lessons',
       title: 'Lessons & Materials',
       subtitle: 'Organize lessons and upload learning materials',
       requiresCertified: false,
     },
     {
       step: 3,
+      id: 'section-quiz',
       title: 'Certification Quiz',
       subtitle: 'Set up quiz and passing criteria',
       requiresCertified: true,
     },
     {
       step: 4,
+      id: 'section-certificate',
       title: 'Certificate Template',
       subtitle: 'Design and configure course certificate',
       requiresCertified: true,
@@ -791,7 +851,7 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
   return (
     <div className="space-y-6">
       {/* Top Banner Navigation Header */}
-      <div className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-aos="fade-down" className="clay-card p-6 rounded-2xl border border-white/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="clay-pill text-[10px] font-bold uppercase tracking-widest bg-[#2C51A2] text-white px-2.5 py-0.5 rounded-full">
@@ -819,12 +879,12 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
 
       {/* 2-Column Curriculum Studio Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Connected Vertical Timeline Stepper */}
-        <div className="lg:col-span-4 xl:col-span-3">
+        {/* Left Column: Connected Vertical Timeline Stepper (Sticky Anchor Spy) */}
+        <div data-aos="fade-right" data-aos-delay="100" className="lg:col-span-4 xl:col-span-3 sticky top-6 z-20">
           <div className="clay-card p-4 sm:p-5 rounded-2xl border border-white/60 space-y-2 relative">
             {visibleSteps.map((item, idx) => {
-              const isActive = currentStep === item.step;
-              const isCompleted = currentStep > item.step;
+              const isActive = activeSection === item.id;
+              const isCompleted = isSectionComplete(item.step);
               const isLast = idx === visibleSteps.length - 1;
 
               return (
@@ -833,23 +893,19 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
                   {!isLast && (
                     <div
                       className={`absolute left-[31px] top-12 bottom-[-16px] w-[2px] z-0 ${
-                        currentStep > item.step ? 'bg-[#1E3B78]' : 'bg-[#CBD5E1]'
+                        isCompleted ? 'bg-[#1E3B78]' : 'bg-[#CBD5E1]'
                       }`}
                     />
                   )}
 
                   <div
-                    onClick={() => {
-                      if (isCompleted || isActive) {
-                        setCurrentStep(item.step);
-                      }
-                    }}
-                    className={`relative z-10 p-3.5 sm:p-4 rounded-2xl flex items-start gap-3.5 transition-all ${
+                    onClick={() => scrollToSection(item.id)}
+                    className={`relative z-10 p-3.5 sm:p-4 rounded-2xl flex items-start gap-3.5 transition-all cursor-pointer ${
                       isActive
                         ? 'bg-[#1E3B78] text-white shadow-md'
                         : isCompleted
-                        ? 'bg-white/60 hover:bg-white cursor-pointer'
-                        : 'bg-transparent hover:bg-white/40 cursor-pointer'
+                        ? 'bg-white/60 hover:bg-white'
+                        : 'bg-transparent hover:bg-white/40'
                     }`}
                   >
                     {/* Circular Step Badge */}
@@ -889,13 +945,13 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
           </div>
         </div>
 
-        {/* Right Column: Step Form Content & Actions */}
-        <div className="lg:col-span-8 xl:col-span-9 space-y-6">
+        {/* Right Column: Single Unified Container for all Curriculum Sections */}
+        <div data-aos="fade-left" data-aos-delay="100" className="lg:col-span-8 xl:col-span-9">
+          <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 shadow-sm space-y-8">
 
-      {/* STEP 1: Course Fundamentals & Duration in Days */}
-      {currentStep === 1 && (
-        <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 space-y-6">
-          <div className="border-b border-[#E2E8F0] pb-4">
+            {/* SECTION 1: Course Fundamentals & Duration in Days */}
+            <div id="section-fundamentals" className="space-y-6 scroll-mt-6">
+        <div className="border-b border-[#E2E8F0] pb-4">
             <h2 className="text-base font-bold text-[#1E3B78] uppercase tracking-wide">
               Step 1: Course Specifications & Duration
             </h2>
@@ -913,21 +969,20 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
               placeholder="e.g. Enterprise Cloud Microservices Architecture with Go"
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
               <Select
                 label="Category"
                 value={courseForm.category}
                 onChange={(e) => setCourseForm({ ...courseForm, category: e.target.value })}
-                options={[
-                  { value: 'Software Engineering', label: 'Software Engineering' },
-                  { value: 'Frontend Engineering', label: 'Frontend Engineering' },
-                  { value: 'Cloud & DevOps', label: 'Cloud & DevOps' },
-                  { value: 'Information Security', label: 'Information Security' },
-                  { value: 'Quality Assurance', label: 'Quality Assurance' },
-                  { value: 'Corporate Compliance', label: 'Corporate Compliance' },
-                ]}
+                options={categoryOptions.map((cat) => ({ value: cat, label: cat }))}
+                allowCreate={true}
+                createLabel="Add New Category"
+                onCreate={handleCreateCategoryInDropdown}
               />
+            </div>
 
+            {/* Course Credential Type and Course Access Type Side-by-Side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#1E3B78] mb-1.5">
                   Course Credential Type <span className="text-[#DC2626]">*</span>
@@ -958,6 +1013,30 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
                     <span>Non-Certified</span>
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <Select
+                  label="Course Access Type"
+                  required
+                  value={courseForm.access_type}
+                  onChange={(e) => setCourseForm({ ...courseForm, access_type: e.target.value })}
+                  options={[
+                    {
+                      value: 'open_enrollment',
+                      label: 'Open for Enrollment',
+                    },
+                    {
+                      value: 'required_admin_access',
+                      label: 'Required Admin Access',
+                    },
+                  ]}
+                />
+                <p className="text-[11px] text-[#64748B] mt-1.5 leading-snug">
+                  {courseForm.access_type === 'open_enrollment'
+                    ? 'Open for Enrollment: Trainees can register directly without admin approval and begin learning immediately.'
+                    : 'Required Admin Access: Trainees can submit enrollment requests, but access requires administrator approval.'}
+                </p>
               </div>
             </div>
 
@@ -1006,12 +1085,10 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
             </div>
           </div>
         </div>
-      )}
 
-      {/* STEP 2: Curriculum Lessons & Attached Materials */}
-      {currentStep === 2 && (
-        <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-4">
+            {/* SECTION 2: Curriculum Lessons & Attached Materials */}
+            <div id="section-lessons" className="pt-8 border-t border-[#E2E8F0] space-y-6 scroll-mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-4">
             <div>
               <h2 className="text-base font-bold text-[#1E3B78] uppercase tracking-wide">
                 Step 2: Formulate Lessons & Attach Study Materials
@@ -1215,11 +1292,10 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
             })}
           </div>
         </div>
-      )}
 
-      {/* STEP 3: Certification Quiz & Question Generation (Certified Only) */}
-      {currentStep === 3 && courseForm.course_type === 'certified' && (
-        <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 space-y-6">
+            {/* SECTION 3: Certification Quiz & Question Generation (Certified Only) */}
+            {courseForm.course_type === 'certified' && (
+              <div id="section-quiz" className="pt-8 border-t border-[#E2E8F0] space-y-6 scroll-mt-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-4">
             <div>
               <h2 className="text-base font-bold text-[#1E3B78] uppercase tracking-wide">
@@ -1434,9 +1510,9 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
         </div>
       )}
 
-      {/* STEP 4: Certificate Template Selection (Certified Only) */}
-      {currentStep === 4 && courseForm.course_type === 'certified' && (
-        <div className="clay-card p-6 sm:p-8 rounded-2xl border border-white/60 space-y-6">
+            {/* SECTION 4: Certificate Template Selection (Certified Only) */}
+            {courseForm.course_type === 'certified' && (
+              <div id="section-certificate" className="pt-8 border-t border-[#E2E8F0] space-y-6 scroll-mt-6">
           <div className="border-b border-[#E2E8F0] pb-4">
             <h2 className="text-base font-bold text-[#1E3B78] uppercase tracking-wide">
               Step 4: Choose Certificate Credential Template
@@ -1498,41 +1574,41 @@ export default function UnifiedCourseCreator({ courseId = null, onCancel, onSucc
         </div>
       )}
 
-          {/* Standalone Navigation Controls (Container Removed) */}
-          <div className="flex items-center justify-between pt-1">
-            <div>
-              {submitting && (
-                <div className="text-xs font-bold text-[#2C51A2] flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#2C51A2] animate-ping" />
-                  <span>{submitStatusText}</span>
-                </div>
-              )}
-            </div>
+            {/* Unified Curriculum Actions Toolbar */}
+            <div className="pt-6 border-t border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                {submitting ? (
+                  <div className="text-xs font-bold text-[#2C51A2] flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#2C51A2] animate-ping" />
+                    <span>{submitStatusText}</span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-[#64748B]">
+                    All curriculum sections are configured and saved simultaneously into the enterprise catalog.
+                  </div>
+                )}
+              </div>
 
-            <div className="flex items-center gap-3 ml-auto">
-              {currentStep > 1 && (
+              <div className="flex items-center gap-3 ml-auto">
                 <Button
                   variant="secondary"
                   size="md"
-                  icon={ArrowLeft}
-                  onClick={() => setCurrentStep(currentStep - 1)}
+                  onClick={onCancel}
                   disabled={submitting}
                 >
-                  Previous Step
+                  Cancel
                 </Button>
-              )}
 
-              <Button
-                variant="primary"
-                size="md"
-                icon={currentStep === totalSteps ? CheckCircle : ArrowRight}
-                loading={submitting}
-                onClick={handleNextStep}
-              >
-                {currentStep === totalSteps
-                  ? (courseId ? 'Save & Update Course Curriculum' : 'Create Complete Course Curriculum')
-                  : 'Continue to Next Step'}
-              </Button>
+                <Button
+                  variant="primary"
+                  size="md"
+                  icon={CheckCircle}
+                  loading={submitting}
+                  onClick={handleValidateAndSubmit}
+                >
+                  {courseId ? 'Save & Update Course Curriculum' : 'Create Complete Course Curriculum'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
